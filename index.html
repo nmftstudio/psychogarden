@@ -2,597 +2,340 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Overgrownd v3.0</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>AETERNA | Psychoactive Frontier</title>
+    <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Space+Mono&display=swap" rel="stylesheet">
     <style>
+        :root {
+            --gold: #d4af37;
+            --void: #020402;
+            --glass: rgba(10, 15, 10, 0.95);
+            --border: rgba(212, 175, 55, 0.3);
+        }
+
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        
-        body {
-            font-family: system-ui, -apple-system, sans-serif;
-            background: #000;
-            color: #fff;
+        body { 
+            background: var(--void); 
+            color: #e0eadd; 
+            font-family: 'Libre Baskerville', serif; 
             overflow: hidden;
+            transition: filter 1s ease; /* Para los efectos de la droga */
         }
-        
-        canvas {
-            position: absolute;
-            top: 0;
-            left: 0;
+
+        canvas { position: absolute; top: 0; left: 0; display: block; }
+        #fxCanvas { pointer-events: none; z-index: 5; opacity: 0.6; }
+
+        /* --- UI --- */
+        #interface {
+            position: absolute; z-index: 100; width: 100%; height: 100%;
+            pointer-events: none; display: flex; flex-direction: column;
+            justify-content: space-between; padding: 25px;
         }
-        
-        #sky { z-index: 1; }
-        #world { z-index: 2; }
-        #particles { z-index: 3; pointer-events: none; }
-        
-        #ui {
-            position: absolute;
-            z-index: 10;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
+
+        .hud-top { display: flex; justify-content: space-between; pointer-events: auto; }
+        .data-box { 
+            background: var(--glass); border: 1px solid var(--border);
+            padding: 10px 20px; border-radius: 2px; backdrop-filter: blur(15px);
         }
-        
-        .panel {
-            pointer-events: auto;
-            background: rgba(0, 0, 0, 0.7);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 12px;
-            padding: 15px 20px;
+        .data-box label { font-family: 'Space Mono', monospace; font-size: 9px; text-transform: uppercase; color: var(--gold); display: block; margin-bottom: 4px; }
+        .data-box span { font-size: 18px; font-weight: 700; letter-spacing: 1px; }
+
+        .nexus-nav { 
+            position: absolute; left: 25px; top: 50%; transform: translateY(-50%);
+            display: flex; flex-direction: column; gap: 12px; pointer-events: auto;
         }
-        
-        #topBar {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            right: 20px;
-            display: flex;
-            justify-content: space-between;
+        .nexus-btn {
+            width: 48px; height: 48px; border: 1px solid var(--border);
+            background: var(--glass); color: var(--gold); border-radius: 0; /* Square Pro Look */
+            cursor: pointer; transition: 0.3s; font-size: 18px;
+            display: flex; align-items: center; justify-content: center;
         }
-        
-        #stats {
-            display: flex;
-            gap: 20px;
+        .nexus-btn:hover { background: var(--gold); color: var(--void); transform: scale(1.05); }
+
+        .toolbar { 
+            display: flex; justify-content: center; gap: 8px; pointer-events: auto;
+            margin-bottom: 5px;
         }
-        
-        .stat {
-            display: flex;
-            flex-direction: column;
+        .tool {
+            padding: 10px 24px; background: var(--glass); border: 1px solid var(--border);
+            color: #fff; cursor: pointer; font-family: 'Space Mono', monospace;
+            text-transform: uppercase; font-size: 10px; transition: 0.2s;
         }
-        
-        .stat-label {
-            font-size: 10px;
-            opacity: 0.6;
-            text-transform: uppercase;
-        }
-        
-        .stat-value {
-            font-size: 20px;
-            font-weight: bold;
-            color: #4ade80;
-        }
-        
-        #weather {
-            font-size: 24px;
-        }
-        
-        #bottomBar {
-            position: absolute;
-            bottom: 20px;
-            left: 20px;
-            right: 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-end;
-        }
-        
-        #controls {
-            display: flex;
-            gap: 10px;
-        }
-        
-        button {
-            background: rgba(74, 222, 128, 0.2);
-            border: 1px solid rgba(74, 222, 128, 0.5);
-            color: #4ade80;
-            padding: 12px 20px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 14px;
-            transition: all 0.3s;
+        .tool.active { border-color: #fff; background: var(--gold); color: var(--void); }
+
+        /* --- MODALES --- */
+        .modal {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.95);
+            display: none; align-items: center; justify-content: center; z-index: 1000;
             pointer-events: auto;
         }
-        
-        button:hover {
-            background: rgba(74, 222, 128, 0.4);
-            transform: translateY(-2px);
+        .modal-content {
+            width: 95%; max-width: 450px; padding: 40px; border: 1px solid var(--gold);
+            background: var(--void); text-align: center;
         }
-        
-        button:disabled {
-            opacity: 0.3;
-            cursor: not-allowed;
-        }
-        
-        #log {
-            position: absolute;
-            top: 100px;
-            right: 20px;
-            max-width: 300px;
-            pointer-events: none;
-        }
-        
-        .log-entry {
-            background: rgba(0, 0, 0, 0.8);
-            border: 1px solid rgba(74, 222, 128, 0.3);
-            padding: 10px;
-            margin-bottom: 8px;
-            border-radius: 6px;
-            font-size: 12px;
-            animation: fadeIn 0.3s;
-        }
-        
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateX(20px); }
-            to { opacity: 1; transform: translateX(0); }
-        }
+        .market-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 20px; }
+        .market-item { border: 1px solid var(--border); padding: 15px; cursor: pointer; text-align: left; }
+        .market-item:hover { border-color: #fff; background: #0a100a; }
+        .market-item h4 { color: var(--gold); margin-bottom: 5px; font-size: 14px; }
+        .market-item p { font-size: 10px; opacity: 0.7; }
+
     </style>
 </head>
 <body>
-    <canvas id="sky"></canvas>
-    <canvas id="world"></canvas>
-    <canvas id="particles"></canvas>
-    
-    <div id="ui">
-        <div id="topBar">
-            <div class="panel" id="stats">
-                <div class="stat">
-                    <span class="stat-label">Biomasa</span>
-                    <span class="stat-value" id="bioStat">0</span>
-                </div>
-                <div class="stat">
-                    <span class="stat-label">Especies</span>
-                    <span class="stat-value" id="speciesStat">0</span>
-                </div>
-                <div class="stat">
-                    <span class="stat-label">Población</span>
-                    <span class="stat-value" id="popStat">0</span>
-                </div>
+
+    <canvas id="skyCanvas"></canvas>
+    <canvas id="mainCanvas"></canvas>
+    <canvas id="fxCanvas"></canvas>
+
+    <div id="interface">
+        <div class="hud-top">
+            <div class="data-box">
+                <label>System Bio-Mass</label>
+                <span id="stat-bio">1500</span>
             </div>
-            
-            <div class="panel">
-                <div id="weather">☀️</div>
+            <div class="data-box" style="text-align: right;">
+                <label>Neuro-Clima</label>
+                <span id="stat-weather">Lucid</span>
             </div>
         </div>
-        
-        <div id="log"></div>
-        
-        <div id="bottomBar">
-            <div class="panel" id="controls">
-                <button onclick="plantSeed()" id="plantBtn">🌱 Plantar (30)</button>
-                <button onclick="spawnCreature()">🦋 Criatura (50)</button>
-                <button onclick="changeWeather()">🌦️ Clima</button>
-                <button onclick="clearWorld()">🗑️ Limpiar</button>
-            </div>
+
+        <div class="nexus-nav">
+            <button class="nexus-btn" onclick="openModule('market')">🛒</button>
+            <button class="nexus-btn" onclick="openModule('dna')">🧬</button>
+            <button class="nexus-btn" onclick="openModule('vibe')">🧘</button>
+        </div>
+
+        <div class="toolbar">
+            <button class="tool active" id="tool-plant" onclick="setTool('plant')">Seed</button>
+            <button class="tool" id="tool-inspect" onclick="setTool('inspect')">Inspect DNA</button>
+        </div>
+    </div>
+
+    <div id="modal" class="modal">
+        <div class="modal-content">
+            <div id="modal-inner"></div>
+            <button class="tool" style="margin-top:25px; width:100%" onclick="closeModal()">Return to Neural-Net</button>
         </div>
     </div>
 
     <script>
-        // State
-        const state = {
-            bio: 500,
-            plants: [],
-            creatures: [],
-            species: new Set(),
-            weather: 'sunny',
-            plantMode: false
+        /**
+         * AETERNA: NEURO-EDITION
+         * Procedural Psychoactive Ecosystem
+         */
+
+        const STATE = {
+            bio: 1500, plants: [], entities: [],
+            tool: 'plant', horizon: 0,
+            globalTrip: 0, // 0 to 1, affects screen filters
+            colors: { gold: '#d4af37', stimulation: '#4ade80', sedation: '#60a5fa', hallucination: '#a855f7' }
         };
 
-        // Weather types
-        const weather = {
-            sunny: { sky1: '#87CEEB', sky2: '#FFC896', icon: '☀️', wind: 0.3 },
-            cloudy: { sky1: '#788CA0', sky2: '#A0AAB4', icon: '☁️', wind: 0.5 },
-            rainy: { sky1: '#465064', sky2: '#646E78', icon: '🌧️', wind: 0.8 },
-            night: { sky1: '#0A0A1E', sky2: '#1E1432', icon: '🌙', wind: 0.2 }
-        };
+        const canvasM = document.getElementById('mainCanvas');
+        const ctxM = canvasM.getContext('2d');
+        const canvasS = document.getElementById('skyCanvas');
+        const ctxS = canvasS.getContext('2d');
 
-        let currentWeather = weather.sunny;
-        let windSpeed = 0.3;
-
-        // Canvas setup
-        const skyCanvas = document.getElementById('sky');
-        const worldCanvas = document.getElementById('world');
-        const particlesCanvas = document.getElementById('particles');
-        
-        const skyCtx = skyCanvas.getContext('2d');
-        const worldCtx = worldCanvas.getContext('2d');
-        const particlesCtx = particlesCanvas.getContext('2d');
-
-        function resizeCanvas() {
-            const w = window.innerWidth;
-            const h = window.innerHeight;
-            
-            [skyCanvas, worldCanvas, particlesCanvas].forEach(canvas => {
-                canvas.width = w;
-                canvas.height = h;
-            });
-        }
-
-        resizeCanvas();
-        window.addEventListener('resize', resizeCanvas);
-
-        // Plant class
+        // --- PLANTAS PSICOACTIVAS ---
         class Plant {
-            constructor(x, y) {
-                this.x = x;
-                this.y = y;
-                this.age = 0;
+            constructor(x, y, type = null) {
+                this.x = x; this.y = y;
                 this.growth = 0;
-                this.dead = false;
-                
-                // DNA
-                this.size = 40 + Math.random() * 60;
-                this.branches = 3 + Math.floor(Math.random() * 4);
-                this.hue = Math.random() * 360;
-                this.angle = 0.3 + Math.random() * 0.4;
-                this.hasFlowers = Math.random() > 0.5;
-                this.windOffset = Math.random() * Math.PI * 2;
-                
-                const type = ['Árbol', 'Arbusto', 'Helecho'][Math.floor(Math.random() * 3)];
-                state.species.add(type);
-            }
-            
-            update() {
-                if (this.growth < 1) {
-                    this.growth += 0.005;
-                }
-                this.age++;
-                
-                if (this.age > 3000) {
-                    this.dead = true;
-                    state.bio += 10;
-                }
-            }
-            
-            draw(ctx) {
-                if (this.dead) return;
-                
-                ctx.save();
-                ctx.translate(this.x, this.y);
-                ctx.scale(this.growth, this.growth);
-                
-                const sway = Math.sin(Date.now() * 0.001 + this.windOffset) * windSpeed * 0.05;
-                ctx.rotate(sway);
-                
-                this.drawBranch(ctx, this.size, 0, this.branches);
-                
-                ctx.restore();
-            }
-            
-            drawBranch(ctx, len, angle, depth) {
-                if (depth <= 0 || len < 2) return;
-                
-                ctx.save();
-                ctx.rotate(angle);
-                
-                ctx.strokeStyle = `hsl(${this.hue}, 60%, ${40 + depth * 5}%)`;
-                ctx.lineWidth = Math.max(1, depth * 1.5);
-                ctx.lineCap = 'round';
-                
-                ctx.beginPath();
-                ctx.moveTo(0, 0);
-                ctx.lineTo(0, -len);
-                ctx.stroke();
-                
-                // Leaves
-                if (depth <= 2 && Math.random() < 0.3) {
-                    ctx.fillStyle = `hsl(${this.hue}, 70%, 50%)`;
-                    ctx.beginPath();
-                    ctx.arc(0, -len, 3, 0, Math.PI * 2);
-                    ctx.fill();
-                }
-                
-                // Flowers
-                if (depth === 1 && this.hasFlowers && Math.random() < 0.5) {
-                    ctx.fillStyle = `hsl(${(this.hue + 180) % 360}, 80%, 60%)`;
-                    ctx.beginPath();
-                    ctx.arc(0, -len, 4, 0, Math.PI * 2);
-                    ctx.fill();
-                }
-                
-                ctx.translate(0, -len);
-                
-                for (let i = 0; i < 2; i++) {
-                    const newAngle = (Math.random() - 0.5) * this.angle * 2;
-                    this.drawBranch(ctx, len * 0.7, newAngle, depth - 1);
-                }
-                
-                ctx.restore();
-            }
-        }
-
-        // Creature class
-        class Creature {
-            constructor(x, y) {
-                this.x = x;
-                this.y = y;
-                this.vx = (Math.random() - 0.5) * 3;
-                this.vy = (Math.random() - 0.5) * 3;
                 this.age = 0;
-                this.dead = false;
-                
-                this.size = 8 + Math.random() * 8;
-                this.hue = Math.random() * 360;
-                this.segments = 3 + Math.floor(Math.random() * 3);
-                this.type = ['Volador', 'Saltador'][Math.floor(Math.random() * 2)];
-                
-                state.species.add(this.type);
+                this.type = type || ['stim', 'sedative', 'trippy'][Math.floor(Math.random()*3)];
+                this.hue = this.getHue();
+                this.consumed = false;
             }
-            
+            getHue() {
+                if(this.type === 'stim') return 120; // Verde
+                if(this.type === 'sedative') return 210; // Azul
+                return 280; // Púrpura
+            }
             update() {
-                this.age++;
-                
-                // Movement
-                this.x += this.vx;
-                this.y += this.vy;
-                
-                // Boundaries
-                if (this.x < 0) this.x = window.innerWidth;
-                if (this.x > window.innerWidth) this.x = 0;
-                if (this.y < 50) this.vy = Math.abs(this.vy);
-                if (this.y > window.innerHeight - 100) this.vy = -Math.abs(this.vy);
-                
-                // Random direction change
-                if (Math.random() < 0.02) {
-                    this.vx += (Math.random() - 0.5) * 0.5;
-                    this.vy += (Math.random() - 0.5) * 0.5;
-                }
-                
-                if (this.age > 1500) {
-                    this.dead = true;
-                }
+                if(!this.consumed && this.growth < 1) this.growth += 0.003;
+                this.age += 0.02;
             }
-            
             draw(ctx) {
-                if (this.dead) return;
-                
+                if(this.consumed) return;
                 ctx.save();
                 ctx.translate(this.x, this.y);
-                
-                for (let i = 0; i < this.segments; i++) {
-                    const offset = Math.sin(Date.now() * 0.005 + i * 0.5) * 2;
-                    const size = this.size * (1 - i * 0.15);
-                    
-                    ctx.fillStyle = `hsl(${this.hue}, 70%, ${50 - i * 5}%)`;
-                    ctx.beginPath();
-                    ctx.arc(offset, -i * this.size * 0.6, size, 0, Math.PI * 2);
-                    ctx.fill();
-                }
-                
-                // Wings
-                const wingFlap = Math.sin(Date.now() * 0.01) * 0.3;
-                ctx.strokeStyle = `hsla(${this.hue}, 50%, 60%, 0.6)`;
-                ctx.lineWidth = 2;
-                
-                ctx.beginPath();
-                ctx.moveTo(0, -this.size * 0.3);
-                ctx.quadraticCurveTo(-this.size * 1.5, -this.size * (0.8 + wingFlap), -this.size * 1.2, -this.size * 0.2);
-                ctx.stroke();
-                
-                ctx.beginPath();
-                ctx.moveTo(0, -this.size * 0.3);
-                ctx.quadraticCurveTo(this.size * 1.5, -this.size * (0.8 + wingFlap), this.size * 1.2, -this.size * 0.2);
-                ctx.stroke();
-                
+                // Glow effect based on psychoactivity
+                ctx.shadowBlur = 15 * this.growth;
+                ctx.shadowColor = `hsl(${this.hue}, 100%, 50%)`;
+                this.renderBranch(ctx, 55 * this.growth, 0, 5);
+                ctx.restore();
+            }
+            renderBranch(ctx, len, angle, depth) {
+                if(depth <= 0) return;
+                ctx.save();
+                ctx.rotate(angle + Math.sin(this.age + len) * (this.type === 'stim' ? 0.08 : 0.02));
+                ctx.strokeStyle = `hsl(${this.hue}, ${40 + (6-depth)*10}%, ${15 + (6-depth)*5}%)`;
+                ctx.lineWidth = depth * 1.5;
+                ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(0, -len); ctx.stroke();
+                ctx.translate(0, -len);
+                const split = this.type === 'trippy' ? 0.8 : 0.4;
+                this.renderBranch(ctx, len * 0.75, split, depth - 1);
+                this.renderBranch(ctx, len * 0.75, -split, depth - 1);
                 ctx.restore();
             }
         }
 
-        // Initialize world
-        function initWorld() {
-            for (let i = 0; i < 8; i++) {
-                const x = (i + 1) * (window.innerWidth / 9);
-                state.plants.push(new Plant(x, window.innerHeight - 80));
+        // --- HUMANOS (OBSERVADORES AFECTADOS) ---
+        class Observer {
+            constructor() {
+                this.x = -50; this.y = STATE.horizon;
+                this.speed = 0.8;
+                this.state = 'sober'; // sober, stim, high, zen
+                this.tripTimer = 0;
+                this.color = "white";
             }
-            
-            for (let i = 0; i < 5; i++) {
-                const x = Math.random() * window.innerWidth;
-                const y = window.innerHeight - 150 - Math.random() * 200;
-                state.creatures.push(new Creature(x, y));
-            }
-        }
-
-        // Draw functions
-        function drawSky() {
-            const gradient = skyCtx.createLinearGradient(0, 0, 0, window.innerHeight);
-            gradient.addColorStop(0, currentWeather.sky1);
-            gradient.addColorStop(1, currentWeather.sky2);
-            
-            skyCtx.fillStyle = gradient;
-            skyCtx.fillRect(0, 0, window.innerWidth, window.innerHeight);
-            
-            // Horizon
-            const horizonY = window.innerHeight * 0.65;
-            skyCtx.fillStyle = 'rgba(0, 0, 0, 0.2)';
-            skyCtx.fillRect(0, horizonY, window.innerWidth, window.innerHeight - horizonY);
-        }
-
-        function drawGround() {
-            const groundY = window.innerHeight - 80;
-            
-            worldCtx.fillStyle = '#1a1a1a';
-            worldCtx.fillRect(0, groundY, window.innerWidth, 80);
-            
-            // Grass
-            worldCtx.strokeStyle = 'rgba(74, 222, 128, 0.3)';
-            worldCtx.lineWidth = 1;
-            
-            for (let x = 0; x < window.innerWidth; x += 5) {
-                const height = 5 + Math.random() * 8;
-                const sway = Math.sin(Date.now() * 0.002 + x * 0.1) * windSpeed * 2;
-                
-                worldCtx.beginPath();
-                worldCtx.moveTo(x, groundY);
-                worldCtx.lineTo(x + sway, groundY - height);
-                worldCtx.stroke();
-            }
-        }
-
-        function drawRain() {
-            if (state.weather !== 'rainy') return;
-            
-            particlesCtx.strokeStyle = 'rgba(200, 220, 255, 0.5)';
-            particlesCtx.lineWidth = 2;
-            
-            for (let i = 0; i < 100; i++) {
-                const x = (Date.now() * 0.1 + i * 50) % window.innerWidth;
-                const y = (Date.now() * 0.5 + i * 20) % window.innerHeight;
-                
-                particlesCtx.beginPath();
-                particlesCtx.moveTo(x, y);
-                particlesCtx.lineTo(x + 2, y + 15);
-                particlesCtx.stroke();
-            }
-        }
-
-        // Game loop
-        function gameLoop() {
-            // Sky
-            drawSky();
-            
-            // World
-            worldCtx.clearRect(0, 0, window.innerWidth, window.innerHeight);
-            drawGround();
-            
-            // Update & draw plants
-            state.plants = state.plants.filter(plant => {
-                plant.update();
-                plant.draw(worldCtx);
-                return !plant.dead;
-            });
-            
-            // Update & draw creatures
-            state.creatures = state.creatures.filter(creature => {
-                creature.update();
-                creature.draw(worldCtx);
-                return !creature.dead;
-            });
-            
-            // Particles
-            particlesCtx.clearRect(0, 0, window.innerWidth, window.innerHeight);
-            drawRain();
-            
-            // Auto spawn
-            if (Math.random() < 0.001 && state.plants.length < 20) {
-                state.plants.push(new Plant(Math.random() * window.innerWidth, window.innerHeight - 80));
-            }
-            
-            if (Math.random() < 0.0005 && state.creatures.length < 15) {
-                state.creatures.push(new Creature(
-                    Math.random() * window.innerWidth,
-                    window.innerHeight - 150 - Math.random() * 200
-                ));
-            }
-            
-            // Passive bio
-            state.bio += 0.05;
-            
-            // Update UI
-            updateUI();
-            
-            requestAnimationFrame(gameLoop);
-        }
-
-        // UI functions
-        function updateUI() {
-            document.getElementById('bioStat').textContent = Math.floor(state.bio);
-            document.getElementById('speciesStat').textContent = state.species.size;
-            document.getElementById('popStat').textContent = state.plants.length + state.creatures.length;
-            document.getElementById('weather').textContent = currentWeather.icon;
-            
-            const plantBtn = document.getElementById('plantBtn');
-            plantBtn.disabled = state.bio < 30;
-        }
-
-        function addLog(msg) {
-            const log = document.getElementById('log');
-            const entry = document.createElement('div');
-            entry.className = 'log-entry';
-            entry.textContent = msg;
-            log.appendChild(entry);
-            
-            if (log.children.length > 5) {
-                log.removeChild(log.firstChild);
-            }
-            
-            setTimeout(() => {
-                if (entry.parentNode) {
-                    entry.style.opacity = '0';
-                    setTimeout(() => entry.remove(), 500);
+            update() {
+                // Inteligencia de consumo
+                if(this.state === 'sober') {
+                    STATE.plants.forEach(p => {
+                        if(!p.consumed && p.growth > 0.8 && Math.abs(this.x - p.x) < 20) {
+                            this.consume(p);
+                        }
+                    });
                 }
-            }, 5000);
-        }
 
-        // Actions
-        function plantSeed() {
-            if (state.bio >= 30) {
-                state.plantMode = true;
-                worldCanvas.style.cursor = 'cell';
-                addLog('🌱 Click en el suelo para plantar');
+                // Efectos de comportamiento
+                if(this.state === 'stim') { this.x += this.speed * 2.5; this.color = STATE.colors.stimulation; }
+                else if(this.state === 'zen') { this.x += this.speed * 0.2; this.color = STATE.colors.sedation; }
+                else if(this.state === 'high') { this.x += Math.sin(Date.now()*0.01)*5 + this.speed; this.color = STATE.colors.hallucination; }
+                else { this.x += this.speed; this.color = "white"; }
+
+                if(this.tripTimer > 0) {
+                    this.tripTimer--;
+                    if(this.state === 'high') STATE.globalTrip = 0.5; 
+                } else {
+                    this.state = 'sober';
+                    STATE.globalTrip *= 0.95;
+                }
+
+                return this.x < window.innerWidth + 100;
+            }
+            consume(plant) {
+                plant.consumed = true;
+                this.tripTimer = 400;
+                if(plant.type === 'stim') this.state = 'stim';
+                if(plant.type === 'sedative') this.state = 'zen';
+                if(plant.type === 'trippy') this.state = 'high';
+                console.log("Observador en estado:", this.state);
+            }
+            draw(ctx) {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.shadowBlur = (this.state !== 'sober') ? 20 : 0;
+                ctx.shadowColor = this.color;
+                ctx.fillStyle = this.color;
+                ctx.fillRect(-2, -30, 4, 20);
+                ctx.beginPath(); ctx.arc(0, -35, 4, 0, Math.PI*2); ctx.fill();
+                ctx.restore();
             }
         }
 
-        function spawnCreature() {
-            if (state.bio >= 50) {
-                state.creatures.push(new Creature(
-                    Math.random() * window.innerWidth,
-                    window.innerHeight - 150 - Math.random() * 200
-                ));
-                state.bio -= 50;
-                addLog('🦋 Criatura generada');
+        // --- ENGINE CORE ---
+        function init() {
+            resize();
+            window.onresize = resize;
+            canvasM.onmousedown = handleInput;
+            requestAnimationFrame(loop);
+            
+            // Ciclo de vida
+            setInterval(() => {
+                if(STATE.entities.length < 2) STATE.entities.push(new Observer());
+            }, 10000);
+        }
+
+        function resize() {
+            STATE.horizon = window.innerHeight * 0.55;
+            [canvasM, canvasS].forEach(c => {
+                c.width = window.innerWidth;
+                c.height = window.innerHeight;
+            });
+        }
+
+        function loop() {
+            // Screen FX (Psicodelia)
+            if(STATE.globalTrip > 0.1) {
+                document.body.style.filter = `hue-rotate(${Date.now()*0.1 % 360}deg) saturate(2) contrast(1.2)`;
             } else {
-                addLog('❌ Biomasa insuficiente');
+                document.body.style.filter = `none`;
             }
-        }
 
-        function changeWeather() {
-            const types = ['sunny', 'cloudy', 'rainy', 'night'];
-            const current = types.indexOf(state.weather);
-            const next = types[(current + 1) % types.length];
+            // Sky
+            ctxS.fillStyle = '#020402';
+            ctxS.fillRect(0,0, canvasS.width, canvasS.height);
             
-            state.weather = next;
-            currentWeather = weather[next];
-            windSpeed = currentWeather.wind;
+            ctxM.clearRect(0,0, canvasM.width, canvasM.height);
             
-            addLog(`🌦️ Clima: ${currentWeather.icon}`);
+            // Ground
+            ctxM.fillStyle = '#050805';
+            ctxM.fillRect(0, STATE.horizon, canvasM.width, canvasM.height);
+            
+            // Entities
+            STATE.plants.forEach(p => { p.update(); p.draw(ctxM); });
+            STATE.entities = STATE.entities.filter(e => {
+                const active = e.update();
+                e.draw(ctxM);
+                return active;
+            });
+
+            document.getElementById('stat-bio').innerText = Math.floor(STATE.bio);
+            document.getElementById('stat-weather').innerText = STATE.globalTrip > 0.1 ? 'ALTERED' : 'LUCID';
+
+            requestAnimationFrame(loop);
         }
 
-        function clearWorld() {
-            state.plants = [];
-            state.creatures = [];
-            addLog('🗑️ Mundo limpiado');
-        }
-
-        // Click handler
-        worldCanvas.addEventListener('click', (e) => {
-            if (state.plantMode) {
-                const rect = worldCanvas.getBoundingClientRect();
-                const x = e.clientX - rect.left;
-                const y = e.clientY - rect.top;
-                
-                if (y > window.innerHeight - 200 && state.bio >= 30) {
-                    state.plants.push(new Plant(x, window.innerHeight - 80));
-                    state.bio -= 30;
-                    addLog('🌱 Planta sembrada');
-                    state.plantMode = false;
-                    worldCanvas.style.cursor = 'default';
+        function handleInput(e) {
+            if(STATE.tool === 'plant' && e.clientY > STATE.horizon - 100) {
+                if(STATE.bio >= 100) {
+                    STATE.bio -= 100;
+                    STATE.plants.push(new Plant(e.clientX, STATE.horizon));
                 }
             }
-        });
+        }
 
-        // Start
-        initWorld();
-        gameLoop();
-        addLog('🌿 Overgrownd v3.0 iniciado');
+        function setTool(t) {
+            STATE.tool = t;
+            document.querySelectorAll('.tool').forEach(b => b.classList.remove('active'));
+            document.getElementById(`tool-${t}`).classList.add('active');
+        }
+
+        // --- NEXUS MODULES ---
+        function openModule(type) {
+            const m = document.getElementById('modal');
+            const inner = document.getElementById('modal-inner');
+            m.style.display = 'flex';
+
+            if(type === 'market') {
+                inner.innerHTML = `
+                    <h2 style="color:var(--gold)">Neural Market</h2>
+                    <div class="market-grid">
+                        <div class="market-item" onclick="spawnSpecial('stim')"><h4>Neuro-Moss</h4><p>Alcaloide Estimulante rápido.</p></div>
+                        <div class="market-item" onclick="spawnSpecial('sedative')"><h4>Void-Lilly</h4><p>Efecto Zen y cámara lenta.</p></div>
+                        <div class="market-item" onclick="spawnSpecial('trippy')"><h4>Glitch-Root</h4><p>Distorsión de la realidad.</p></div>
+                        <div class="market-item" onclick="STATE.bio += 1000; closeModal()"><h4>Bio-Inject</h4><p>+1000 Bio-Mass</p></div>
+                    </div>
+                `;
+            } else if(type === 'dna') {
+                inner.innerHTML = `<h2>Splicer Mini</h2><p>Click para sintetizar biomasa.</p>
+                <div style="font-size:50px; margin:20px; cursor:pointer" onclick="STATE.bio+=20">🧪</div>`;
+            } else if(type === 'vibe') {
+                inner.innerHTML = `<h2>Atmosphere</h2><p>Limpiando canales neuronales...</p>`;
+                setTimeout(() => { STATE.globalTrip = 0; closeModal(); }, 2000);
+            }
+        }
+
+        function spawnSpecial(type) {
+            STATE.plants.push(new Plant(Math.random()*window.innerWidth, STATE.horizon, type));
+            closeModal();
+        }
+
+        function closeModal() { document.getElementById('modal').style.display = 'none'; }
+
+        init();
     </script>
 </body>
 </html>
