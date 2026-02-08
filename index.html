@@ -3,333 +3,569 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>🌿 Overgrown: Nexus Edition</title>
+    <title>🌿 Overgrown: Infinite Ecosystem</title>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --glass: rgba(10, 10, 12, 0.85);
-            --glass-heavy: rgba(5, 5, 5, 0.95);
+            --glass: rgba(12, 12, 14, 0.85);
+            --glass-border: rgba(255, 255, 255, 0.1);
             --accent: #4ade80;
-            --accent-glow: rgba(74, 222, 128, 0.3);
             --text: #ecfdf5;
-            --border: rgba(255, 255, 255, 0.08);
+            --font-main: 'Outfit', sans-serif;
+            --font-code: 'Space Mono', monospace;
         }
 
         body, html {
             margin: 0; padding: 0; width: 100%; height: 100%;
-            overflow: hidden; background: #020202; color: var(--text);
-            font-family: 'Outfit', sans-serif;
+            overflow: hidden; background: #050505; color: var(--text);
+            font-family: var(--font-main); user-select: none;
         }
 
         canvas { position: absolute; top: 0; left: 0; }
         #skyCanvas { z-index: 0; }
         #bgCanvas { z-index: 1; }
-        #gameCanvas { z-index: 2; }
+        #gameCanvas { z-index: 2; } /* Plantas y Animales Terrestres */
+        #fxCanvas { z-index: 3; pointer-events: none; } /* Insectos y Clima */
         #uiLayer { position: absolute; z-index: 10; width: 100%; height: 100%; pointer-events: none; }
 
-        /* --- UI COMPONENTS --- */
+        /* UI Styling */
         .hud-panel {
             pointer-events: auto; background: var(--glass);
-            backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
-            border: 1px solid var(--border); border-radius: 16px;
+            backdrop-filter: blur(12px); border: 1px solid var(--glass-border);
+            border-radius: 12px; padding: 12px 16px;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.6);
         }
 
         .top-bar {
-            position: absolute; top: 24px; left: 24px; right: 24px;
-            display: flex; justify-content: space-between; align-items: center;
+            position: absolute; top: 20px; left: 20px; right: 20px;
+            display: flex; justify-content: space-between; align-items: flex-start;
         }
 
-        .stats-cluster { display: flex; gap: 30px; padding: 12px 24px; }
-        .stat-item { display: flex; flex-direction: column; }
-        .stat-label { font-size: 10px; text-transform: uppercase; letter-spacing: 2px; opacity: 0.5; }
-        .stat-value { font-family: 'Space Mono', monospace; font-size: 20px; font-weight: 700; color: var(--accent); }
+        .stat-box label { display: block; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: #aaa; margin-bottom: 2px; }
+        .stat-box span { font-family: var(--font-code); font-size: 18px; font-weight: 700; color: var(--accent); }
 
-        /* --- NEXUS MENU (SIDE) --- */
-        .nexus-trigger {
-            position: absolute; left: 24px; top: 120px;
-            width: 50px; height: 50px; border-radius: 12px;
-            background: var(--glass); border: 1px solid var(--border);
-            color: var(--accent); font-size: 24px; cursor: pointer;
-            pointer-events: auto; display: flex; align-items: center; justify-content: center;
-            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        /* Scanner Widget */
+        #scanner {
+            position: absolute; top: 80px; left: 20px;
+            width: 220px; display: none;
+            border-left: 2px solid var(--accent);
         }
-        .nexus-trigger:hover { transform: scale(1.1); box-shadow: 0 0 20px var(--accent-glow); }
+        #scanner h3 { margin: 0 0 5px 0; font-size: 14px; color: var(--accent); }
+        #scanner p { margin: 0; font-size: 11px; color: #ccc; line-height: 1.4; }
+        
+        /* Toolbar */
+        .toolbar {
+            position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%);
+            display: flex; gap: 10px; padding: 8px; border-radius: 20px;
+            background: rgba(0,0,0,0.6); backdrop-filter: blur(10px); pointer-events: auto;
+        }
+        .tool-btn {
+            width: 50px; height: 50px; border-radius: 12px; border: none;
+            background: rgba(255,255,255,0.1); color: #fff; font-size: 20px;
+            cursor: pointer; transition: 0.2s;
+        }
+        .tool-btn.active { background: var(--accent); color: #000; transform: translateY(-5px); }
 
-        #nexusMenu {
-            position: absolute; left: 24px; top: 180px;
-            display: none; flex-direction: column; gap: 10px;
-            pointer-events: auto;
+        /* Intro */
+        #intro {
+            position: fixed; z-index: 100; top: 0; left: 0; width: 100%; height: 100%;
+            background: #000; display: flex; flex-direction: column;
+            justify-content: center; align-items: center; transition: opacity 1s;
         }
-        .module-btn {
-            width: 50px; height: 50px; border-radius: 12px; border: 1px solid var(--border);
-            background: var(--glass); color: #fff; cursor: pointer; font-size: 20px;
-            transition: 0.2s; position: relative;
+        .btn-start {
+            margin-top: 20px; padding: 12px 30px; background: transparent;
+            border: 1px solid var(--accent); color: var(--accent);
+            font-family: var(--font-code); cursor: pointer; text-transform: uppercase;
+            letter-spacing: 2px; transition: 0.3s;
         }
-        .module-btn:hover { background: var(--accent); color: #000; }
-        .module-btn::after {
-            content: attr(data-label); position: absolute; left: 60px; top: 15px;
-            background: #000; padding: 4px 8px; border-radius: 4px; font-size: 10px;
-            white-space: nowrap; opacity: 0; pointer-events: none; transition: 0.2s;
-        }
-        .module-btn:hover::after { opacity: 1; transform: translateX(5px); }
-
-        /* --- OVERLAY POPUPS (MINIGAMES) --- */
-        #moduleOverlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.85); backdrop-filter: blur(10px);
-            z-index: 100; display: none; align-items: center; justify-content: center;
-            pointer-events: auto;
-        }
-        .module-window {
-            width: 90%; max-width: 600px; background: var(--glass-heavy);
-            border: 1px solid var(--accent); border-radius: 24px; padding: 30px;
-            position: relative; box-shadow: 0 0 50px rgba(0,0,0,0.5);
-        }
-        .close-btn {
-            position: absolute; top: 20px; right: 20px;
-            background: none; border: none; color: #666; font-size: 24px; cursor: pointer;
-        }
-        .close-btn:hover { color: var(--accent); }
-
-        /* --- GAME ENGINE CLASSES --- */
-        .game-canvas-mini {
-            width: 100%; height: 300px; background: #080808; border-radius: 12px;
-            margin-top: 20px; border: 1px solid #111; cursor: crosshair;
-        }
-
-        .btn-action {
-            margin-top: 20px; width: 100%; padding: 14px;
-            background: var(--accent); border: none; border-radius: 8px;
-            font-weight: 800; text-transform: uppercase; cursor: pointer;
-        }
-
+        .btn-start:hover { background: var(--accent); color: #000; }
     </style>
 </head>
 <body>
 
+    <div id="intro">
+        <h1 style="font-weight: 300; font-size: 3rem; margin:0;">GENESIS <span style="color:var(--accent); font-weight:700;">ENGINE</span></h1>
+        <p style="color: #666; font-family: var(--font-code);">Procedural Ecosystem Simulation</p>
+        <button class="btn-start" onclick="initGame()">Inicializar Sistema</button>
+    </div>
+
     <canvas id="skyCanvas"></canvas>
     <canvas id="bgCanvas"></canvas>
     <canvas id="gameCanvas"></canvas>
+    <canvas id="fxCanvas"></canvas>
 
     <div id="uiLayer">
         <div class="top-bar">
-            <div class="hud-panel stats-cluster">
-                <div class="stat-item">
-                    <span class="stat-label">Biomass</span>
-                    <span class="stat-value" id="ui-bio">0</span>
+            <div class="hud-panel" style="display:flex; gap:20px;">
+                <div class="stat-box">
+                    <label>Biomasa</label>
+                    <span id="ui-bio">0</span>
                 </div>
-                <div class="stat-item">
-                    <span class="stat-label">Species</span>
-                    <span class="stat-value" id="ui-species">0</span>
+                <div class="stat-box">
+                    <label>Semillas</label>
+                    <span id="ui-seeds">0</span>
+                </div>
+                <div class="stat-box">
+                    <label>Especies</label>
+                    <span id="ui-species">0</span>
                 </div>
             </div>
-            <div class="hud-panel stats-cluster">
-                <div id="weather-tag" style="font-size: 12px; font-weight: 600;">SIMULATION ACTIVE</div>
+            
+            <div class="hud-panel stat-box" style="text-align: right;">
+                <label id="ui-weather">Analizando Atmósfera...</label>
+                <span id="ui-fauna-count">0 Animales Detectados</span>
             </div>
         </div>
 
-        <button class="nexus-trigger" onclick="toggleNexus()">◈</button>
-        <div id="nexusMenu">
-            <button class="module-btn" data-label="DNA Splicer" onclick="openModule('dna')">🧬</button>
-            <button class="module-btn" data-label="Pollinator Run" onclick="openModule('bee')">🐝</button>
-            <button class="module-btn" data-label="Photon Rhythm" onclick="openModule('sun')">☀️</button>
+        <div id="scanner" class="hud-panel">
+            <h3>🧬 Análisis de ADN</h3>
+            <p id="scan-info">Selecciona una planta...</p>
         </div>
 
-        <div id="moduleOverlay">
-            <div class="module-window" id="moduleWindow">
-                <button class="close-btn" onclick="closeModule()">×</button>
-                <div id="moduleContent"></div>
-            </div>
+        <div class="toolbar">
+            <button class="tool-btn active" onclick="setTool('seed')" title="Plantar (Click)">🌱</button>
+            <button class="tool-btn" onclick="setTool('water')" title="Regar">💧</button>
+            <button class="tool-btn" onclick="setTool('mutate')" title="Mutar (+Bio)">🧬</button>
+            <button class="tool-btn" onclick="setTool('harvest')" title="Cosechar">✨</button>
         </div>
     </div>
 
     <script>
         /**
-         * OVERGROWN: NEXUS CORE
-         * Pro Architecture: Modular Game State
+         * GENESIS ENGINE
+         * Sistema de generación procedimental de flora y fauna basado en ADN.
          */
 
-        const State = {
-            bio: 250,
-            seeds: 5,
-            discovered: 0,
-            plants: [],
+        const CFG = {
+            w: 0, h: 0,
+            groundY: 0,
+            colors: { day: '#38bdf8', night: '#0f172a', sun: '#fcd34d', moon: '#e2e8f0' }
+        };
+
+        const STATE = {
+            bio: 100, seeds: 5, time: 8, tool: 'seed',
+            plants: [], animals: [], particles: [],
             weather: 'sunny',
-            time: 12,
-            activeModule: null
+            discoveredSpecies: new Set()
         };
 
-        // --- MASTER ENGINE ---
-        const Engine = {
-            init() {
-                this.setupCanvases();
-                this.loop();
-                this.spawnInitialFlora();
-                window.addEventListener('resize', () => this.setupCanvases());
-            },
-            setupCanvases() {
-                this.w = window.innerWidth;
-                this.h = window.innerHeight;
-                ['sky', 'bg', 'game'].forEach(id => {
-                    const c = document.getElementById(id + 'Canvas');
-                    c.width = this.w; c.height = this.h;
-                });
-            },
-            spawnInitialFlora() {
-                for(let i=0; i<3; i++) {
-                    State.plants.push(new Plant(Math.random()*this.w, this.h - 50));
+        // --- MOTOR DE ADN (PROCEDURAL GENERATION) ---
+        
+        class DNA {
+            constructor(parentDNA = null) {
+                if (parentDNA) {
+                    // Evolución con mutación
+                    this.hue = parentDNA.hue + (Math.random() * 20 - 10);
+                    this.type = Math.random() < 0.1 ? this.randomType() : parentDNA.type; // 10% chance cambio drastico
+                    this.height = parentDNA.height * (0.9 + Math.random() * 0.2);
+                    this.branchAngle = parentDNA.branchAngle + (Math.random() * 0.1 - 0.05);
+                    this.complexity = parentDNA.complexity;
+                    this.leafShape = parentDNA.leafShape;
+                } else {
+                    // Generación espontánea (Semilla nueva)
+                    this.hue = Math.random() * 360;
+                    this.type = this.randomType(); // 'tree', 'bush', 'flower', 'cactus'
+                    this.height = 50 + Math.random() * 100;
+                    this.branchAngle = 0.3 + Math.random() * 0.5;
+                    this.complexity = 3 + Math.floor(Math.random() * 3);
+                    this.leafShape = Math.floor(Math.random() * 4); // 0:circle, 1:oval, 2:needle, 3:flower
                 }
-            },
-            loop() {
-                const gCtx = document.getElementById('gameCanvas').getContext('2d');
-                gCtx.clearRect(0,0, this.w, this.h);
                 
-                // Ground
-                gCtx.fillStyle = '#0a0a0a';
-                gCtx.fillRect(0, this.h-50, this.w, 50);
-
-                State.plants.forEach(p => {
-                    p.update();
-                    p.draw(gCtx);
-                });
-
-                document.getElementById('ui-bio').innerText = Math.floor(State.bio);
-                document.getElementById('ui-species').innerText = State.discovered;
-
-                requestAnimationFrame(() => this.loop());
+                // Determinar atracción de fauna basada en fenotipo
+                this.attracts = this.determineAttraction();
+                this.name = this.generateName();
             }
-        };
 
-        // --- PLANT CLASS (DNA BASED) ---
+            randomType() {
+                const r = Math.random();
+                if(r < 0.4) return 'flower';
+                if(r < 0.7) return 'bush';
+                if(r < 0.9) return 'tree';
+                return 'alien';
+            }
+
+            determineAttraction() {
+                if (this.type === 'flower') return 'insect'; // Abejas, Mariposas
+                if (this.type === 'tree' && this.height > 100) return 'bird'; // Pájaros
+                if (this.type === 'bush') return 'mammal'; // Conejos
+                return 'none';
+            }
+
+            generateName() {
+                const p1 = ['Mega', 'Micro', 'Hydro', 'Pyro', 'Chrono', 'Lumi', 'Shadow', 'Wild'];
+                const p2 = ['Fern', 'Rose', 'Oak', 'Cactus', 'Weed', 'Bloom', 'Sprout', 'Root'];
+                const hex = Math.floor(this.hue).toString(16).toUpperCase();
+                return `${p1[Math.floor(Math.random()*p1.length)]}-${p2[Math.floor(Math.random()*p2.length)]} ${hex}`;
+            }
+        }
+
+        // --- SISTEMA DE FLORA ---
+
         class Plant {
             constructor(x, y, dna = null) {
                 this.x = x; this.y = y;
-                this.dna = dna || {
-                    hue: Math.random() * 360,
-                    size: 40 + Math.random() * 60,
-                    complexity: 3 + Math.floor(Math.random() * 2)
-                };
-                this.growth = 0;
-                State.discovered++;
+                this.dna = dna || new DNA();
+                this.age = 0;
+                this.maxAge = 100 + Math.random() * 50;
+                this.growthRate = 0.2;
+                this.state = 'growing';
+                
+                STATE.discoveredSpecies.add(this.dna.name);
             }
-            update() { if(this.growth < 1) this.growth += 0.005; }
+
+            update() {
+                if (this.state === 'growing') {
+                    this.age += this.growthRate;
+                    if (this.age >= this.maxAge) this.state = 'mature';
+                }
+                // Probabilidad de spawnear fauna si está madura
+                if (this.state === 'mature' && Math.random() < 0.002) {
+                    spawnFauna(this);
+                }
+            }
+
             draw(ctx) {
                 ctx.save();
                 ctx.translate(this.x, this.y);
-                ctx.scale(this.growth, this.growth);
-                ctx.strokeStyle = `hsl(${this.dna.hue}, 60%, 50%)`;
-                ctx.lineWidth = 3;
-                this.drawBranch(ctx, this.dna.size, 0, this.dna.complexity);
+                const scale = Math.min(this.age / 50, 1.5);
+                ctx.scale(scale, scale);
+
+                const color = `hsl(${this.dna.hue}, 60%, 40%)`;
+                ctx.strokeStyle = color;
+                ctx.fillStyle = color;
+                ctx.lineCap = 'round';
+                ctx.lineWidth = this.dna.type === 'tree' ? 8 : 4;
+
+                this.drawBranch(ctx, this.dna.height * 0.2, 0, this.dna.complexity);
                 ctx.restore();
             }
+
             drawBranch(ctx, len, angle, depth) {
-                if(depth === 0) return;
+                if (depth === 0) {
+                    this.drawLeaf(ctx);
+                    return;
+                }
+
+                // Curvatura orgánica usando seno y viento
+                const wind = Math.sin(Date.now() / 1000 + this.x) * 0.05 * (depth + 1);
+                
                 ctx.save();
-                ctx.rotate(angle);
-                ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(0, -len); ctx.stroke();
+                ctx.rotate(angle + wind);
+                
+                // Rama curva
+                ctx.beginPath();
+                ctx.moveTo(0, 0);
+                if (this.dna.type === 'alien') {
+                    // Ramas zig-zag
+                    ctx.lineTo(0, -len/2);
+                    ctx.translate(5, -len/2);
+                    ctx.lineTo(0, -len);
+                } else {
+                    ctx.quadraticCurveTo(5, -len/2, 0, -len);
+                }
+                ctx.stroke();
+
                 ctx.translate(0, -len);
-                this.drawBranch(ctx, len * 0.7, 0.4, depth - 1);
-                this.drawBranch(ctx, len * 0.7, -0.4, depth - 1);
+                const newLen = len * 0.8;
+                
+                // Recursión
+                const branches = this.dna.type === 'bush' ? 3 : 2;
+                for(let i=0; i<branches; i++) {
+                    const spread = this.dna.branchAngle;
+                    const a = -spread + (i * spread * 2 / (branches-1 || 1));
+                    
+                    ctx.save();
+                    ctx.lineWidth *= 0.7;
+                    this.drawBranch(ctx, newLen, a, depth - 1);
+                    ctx.restore();
+                }
                 ctx.restore();
             }
-        }
 
-        // --- NEXUS SYSTEM ---
-        function toggleNexus() {
-            const menu = document.getElementById('nexusMenu');
-            menu.style.display = menu.style.display === 'flex' ? 'none' : 'flex';
-        }
-
-        function openModule(type) {
-            const overlay = document.getElementById('moduleOverlay');
-            const content = document.getElementById('moduleContent');
-            overlay.style.display = 'flex';
-            
-            if(type === 'dna') {
-                content.innerHTML = `
-                    <h2 style="color:var(--accent)">🧬 SPLICER TERMINAL</h2>
-                    <p>Combina biomasa para forzar una mutación sintética rápida.</p>
-                    <div class="game-canvas-mini" id="dnaVisual"></div>
-                    <button class="btn-action" onclick="Modules.runDNA()">SPLICING (Cost: 50 Bio)</button>
-                `;
-            } else if(type === 'bee') {
-                content.innerHTML = `
-                    <h2 style="color:var(--accent)">🐝 POLLINATOR RUN</h2>
-                    <p>Guía el dron-polinizador. Evita las ramas para ganar bio-puntos.</p>
-                    <canvas id="miniGameCanvas" class="game-canvas-mini"></canvas>
-                    <p style="font-size:10px; opacity:0.5">TIP: Usa las flechas o click para elevarte.</p>
-                    <button class="btn-action" onclick="Modules.startBeeGame()">Lanzar Protocolo</button>
-                `;
-            } else if(type === 'sun') {
-                content.innerHTML = `
-                    <h2 style="color:var(--accent)">☀️ PHOTON RHYTHM</h2>
-                    <p>Captura fotones en el momento exacto para sobrecargar el crecimiento.</p>
-                    <div id="rhythmZone" class="game-canvas-mini" style="display:flex; align-items:center; justify-content:center; font-size:40px;">
-                        ⌛ CARGANDO...
-                    </div>
-                `;
-                setTimeout(() => Modules.startSunGame(), 500);
-            }
-        }
-
-        function closeModule() {
-            document.getElementById('moduleOverlay').style.display = 'none';
-            State.activeModule = null;
-        }
-
-        // --- MINI-GAMES LOGIC ---
-        const Modules = {
-            runDNA() {
-                if(State.bio >= 50) {
-                    State.bio -= 50;
-                    const newPlant = new Plant(Math.random()*window.innerWidth, window.innerHeight-50);
-                    newPlant.dna.hue = Math.random() * 360;
-                    State.plants.push(newPlant);
-                    closeModule();
-                }
-            },
-            
-            startBeeGame() {
-                const canvas = document.getElementById('miniGameCanvas');
-                const ctx = canvas.getContext('2d');
-                canvas.width = 540; canvas.height = 300;
-                let beeY = 150; let score = 0;
+            drawLeaf(ctx) {
+                const type = this.dna.leafShape;
+                const leafColor = `hsl(${this.dna.hue + 30}, 80%, 60%)`;
+                ctx.fillStyle = leafColor;
                 
-                const gameLoop = () => {
-                    ctx.fillStyle = '#080808'; ctx.fillRect(0,0,540,300);
-                    ctx.fillStyle = 'yellow'; ctx.beginPath(); ctx.arc(50, beeY, 5, 0, Math.PI*2); ctx.fill();
-                    beeY += 1.5; // Gravity
-                    
-                    ctx.fillStyle = '#fff'; ctx.fillText(`BIO RECOVERY: ${score}`, 20, 30);
-                    
-                    if(beeY < 300 && beeY > 0) {
-                        score++;
-                        State.bio += 0.1;
-                        State.activeModule = requestAnimationFrame(gameLoop);
-                    }
-                };
-                canvas.onmousedown = () => beeY -= 40;
-                gameLoop();
-            },
-
-            startSunGame() {
-                const zone = document.getElementById('rhythmZone');
-                let count = 0;
-                zone.innerHTML = "¡TOCA!";
-                zone.onclick = () => {
-                    count++;
-                    zone.style.background = '#1a1a1a';
-                    setTimeout(() => zone.style.background = '#080808', 100);
-                    State.bio += 2;
-                    if(count > 10) {
-                        zone.innerHTML = "CORE CHARGED!";
-                        setTimeout(closeModule, 1000);
-                    }
-                };
+                ctx.beginPath();
+                if (type === 0) { // Círculo (Flores)
+                    ctx.arc(0, 0, 5, 0, Math.PI*2);
+                } else if (type === 1) { // Oval (Hojas estándar)
+                    ctx.ellipse(0, 0, 6, 3, Math.PI/4, 0, Math.PI*2);
+                } else if (type === 2) { // Agujas (Pinos/Cactus)
+                    ctx.moveTo(0,0); ctx.lineTo(-2,-10); ctx.lineTo(2,-10);
+                } else { // Exótica
+                    ctx.arc(0, 0, 3, 0, Math.PI*2);
+                    ctx.shadowBlur = 5; ctx.shadowColor = leafColor;
+                }
+                ctx.fill();
+                ctx.shadowBlur = 0;
             }
-        };
+        }
 
-        Engine.init();
+        // --- SISTEMA DE FAUNA ---
+
+        class Animal {
+            constructor(type, targetPlant) {
+                this.type = type; // 'bee', 'butterfly', 'rabbit', 'bird'
+                this.target = targetPlant;
+                this.x = type === 'bird' ? Math.random() * CFG.w : targetPlant.x;
+                this.y = type === 'bird' ? 50 : targetPlant.y - 20;
+                this.vx = (Math.random() - 0.5) * 2;
+                this.vy = (Math.random() - 0.5) * 2;
+                this.life = 500 + Math.random() * 500;
+                this.size = type === 'mammal' ? 15 : 5;
+            }
+
+            update() {
+                this.life--;
+                
+                if (this.type === 'insect') {
+                    // Vuelo errático alrededor de la planta
+                    const dx = this.target.x - this.x;
+                    const dy = (this.target.y - this.target.dna.height) - this.y;
+                    this.vx += dx * 0.001 + (Math.random()-0.5);
+                    this.vy += dy * 0.001 + (Math.random()-0.5);
+                    this.vx *= 0.95; this.vy *= 0.95;
+                } else if (this.type === 'mammal') {
+                    // Saltos en el suelo
+                    this.vy += 0.2; // Gravedad
+                    if (this.y >= CFG.groundY) {
+                        this.y = CFG.groundY;
+                        this.vy = -Math.random() * 5 - 2; // Salto
+                        this.vx = (Math.random() - 0.5) * 4;
+                    }
+                } else if (this.type === 'bird') {
+                    this.x += 2;
+                    this.y += Math.sin(this.x * 0.05);
+                }
+
+                this.x += this.vx;
+                this.y += this.vy;
+            }
+
+            draw(ctx) {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                if (this.vx < 0) ctx.scale(-1, 1); // Voltear sprite si va a la izq
+
+                ctx.fillStyle = this.getFaunaColor();
+                
+                if (this.type === 'insect') {
+                    // Dibujar mariposa simple
+                    const wing = Math.abs(Math.sin(Date.now() * 0.02)) * 5;
+                    ctx.beginPath();
+                    ctx.arc(-2, -wing, 3, 0, Math.PI*2);
+                    ctx.arc(2, -wing, 3, 0, Math.PI*2);
+                    ctx.fill();
+                } else if (this.type === 'mammal') {
+                    // Dibujar conejo/bicho silueta
+                    ctx.beginPath();
+                    ctx.arc(0, 0, 8, 0, Math.PI*2); // Cuerpo
+                    ctx.ellipse(5, -8, 2, 6, -0.2, 0, Math.PI*2); // Oreja
+                    ctx.fill();
+                } else if (this.type === 'bird') {
+                    // V
+                    ctx.beginPath();
+                    ctx.moveTo(-5, 0); ctx.lineTo(0, 2); ctx.lineTo(5, 0);
+                    ctx.stroke();
+                }
+
+                ctx.restore();
+            }
+
+            getFaunaColor() {
+                if(this.type === 'insect') return '#fbbf24'; // Dorado
+                if(this.type === 'mammal') return '#a8a29e'; // Grisáceo
+                return '#fff';
+            }
+        }
+
+        function spawnFauna(plant) {
+            const faunaType = plant.dna.attracts;
+            if (faunaType === 'none') return;
+            
+            // Límite de población
+            if (STATE.animals.length > 30) return;
+
+            STATE.animals.push(new Animal(faunaType, plant));
+            updateUI();
+        }
+
+        // --- CORE FUNCTIONS ---
+
+        const cvs = {};
+        const ctx = {};
+
+        function initGame() {
+            document.getElementById('intro').style.opacity = 0;
+            setTimeout(() => document.getElementById('intro').remove(), 1000);
+
+            ['sky', 'bg', 'game', 'fx'].forEach(id => {
+                cvs[id] = document.getElementById(id + 'Canvas');
+                ctx[id] = cvs[id].getContext('2d');
+            });
+
+            window.addEventListener('resize', resize);
+            resize();
+
+            window.addEventListener('mousedown', handleInput);
+            
+            // Autosave loop
+            loop();
+        }
+
+        function resize() {
+            CFG.w = window.innerWidth;
+            CFG.h = window.innerHeight;
+            CFG.groundY = CFG.h - 50;
+            
+            Object.values(cvs).forEach(c => {
+                c.width = CFG.w;
+                c.height = CFG.h;
+            });
+        }
+
+        function loop() {
+            requestAnimationFrame(loop);
+            
+            // Limpiar
+            Object.values(ctx).forEach(c => c.clearRect(0, 0, CFG.w, CFG.h));
+
+            // 1. Cielo y Ciclo Día
+            STATE.time += 0.005;
+            if (STATE.time > 24) STATE.time = 0;
+            drawSky();
+
+            // 2. Fondo (Montañas generadas)
+            drawMountains(ctx.bg);
+
+            // 3. Juego (Plantas y Animales)
+            // Suelo
+            ctx.game.fillStyle = '#1c1917';
+            ctx.game.fillRect(0, CFG.groundY, CFG.w, 100);
+
+            STATE.plants.forEach(p => {
+                p.update();
+                p.draw(ctx.game);
+            });
+
+            // Ordenar animales por Y para profundidad
+            STATE.animals.forEach((a, i) => {
+                a.update();
+                a.draw(ctx.game); // Dibujamos animales en capa de juego
+                if(a.life <= 0) STATE.animals.splice(i, 1);
+            });
+
+            updateUI();
+        }
+
+        function drawSky() {
+            const isDay = STATE.time > 6 && STATE.time < 18;
+            const c = ctx.sky;
+            const bg = isDay ? CFG.colors.day : CFG.colors.night;
+            c.fillStyle = bg;
+            c.fillRect(0,0, CFG.w, CFG.h);
+
+            // Sol / Luna
+            const cx = CFG.w/2 + Math.cos(STATE.time/24 * 6.28) * (CFG.w/2 - 50);
+            const cy = CFG.h + Math.sin(STATE.time/24 * 6.28) * (CFG.h/2);
+            c.beginPath();
+            c.arc(cx, cy, 40, 0, Math.PI*2);
+            c.fillStyle = isDay ? CFG.colors.sun : CFG.colors.moon;
+            c.shadowBlur = 40; c.shadowColor = c.fillStyle;
+            c.fill(); c.shadowBlur = 0;
+        }
+
+        function drawMountains(c) {
+            c.fillStyle = '#111';
+            c.beginPath();
+            c.moveTo(0, CFG.h);
+            for(let i=0; i<=CFG.w; i+=10) {
+                // Generación de terreno simple usando ruido pseudo-aleatorio
+                const h = Math.sin(i * 0.01) * 50 + Math.sin(i * 0.03) * 20;
+                c.lineTo(i, CFG.h - 100 - h);
+            }
+            c.lineTo(CFG.w, CFG.h);
+            c.fill();
+        }
+
+        function handleInput(e) {
+            const rect = cvs.game.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+
+            // Detectar click en planta
+            const clickedPlant = STATE.plants.find(p => Math.abs(p.x - x) < 30 && Math.abs(p.y - p.dna.height/2 - y) < p.dna.height);
+
+            if (clickedPlant) {
+                // Mostrar Info ADN
+                showScanner(clickedPlant);
+                
+                if (STATE.tool === 'harvest' && clickedPlant.state === 'mature') {
+                    // Cosechar = +Semillas del mismo tipo (Clon) + Mutación leve
+                    STATE.bio += 20;
+                    if (Math.random() > 0.3) {
+                        STATE.seeds++;
+                        // Guardamos el ADN para la próxima semilla
+                        STATE.lastDNA = clickedPlant.dna; 
+                    }
+                    STATE.plants = STATE.plants.filter(p => p !== clickedPlant);
+                } else if (STATE.tool === 'mutate') {
+                    if (STATE.bio >= 50) {
+                        STATE.bio -= 50;
+                        clickedPlant.dna = new DNA(clickedPlant.dna); // Re-roll genético
+                        createParticles(x, y - 50, '#a78bfa');
+                    }
+                }
+            } else {
+                // Click en suelo vacio
+                if (STATE.tool === 'seed' && y > CFG.groundY - 100) {
+                    if (STATE.seeds > 0) {
+                        STATE.seeds--;
+                        // Si cosechamos antes, usamos ese ADN con mutación, si no, uno nuevo
+                        const dna = STATE.lastDNA ? new DNA(STATE.lastDNA) : new DNA();
+                        STATE.plants.push(new Plant(x, CFG.groundY, dna));
+                        STATE.lastDNA = null; // Reset
+                        createParticles(x, CFG.groundY, '#4ade80');
+                    }
+                }
+            }
+        }
+
+        function showScanner(plant) {
+            const el = document.getElementById('scanner');
+            el.style.display = 'block';
+            document.getElementById('scan-info').innerHTML = `
+                <strong style="color:${`hsl(${plant.dna.hue},60%,60%)`}">${plant.dna.name}</strong><br>
+                Tipo: ${plant.dna.type.toUpperCase()}<br>
+                Estado: ${plant.state}<br>
+                Atrae: <span style="color:#fff">${plant.dna.attracts.toUpperCase()}</span>
+            `;
+        }
+
+        function createParticles(x, y, color) {
+            // Simplificado para la demo
+            const ctx = cvs.fx.getContext('2d');
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.arc(x, y, 5, 0, Math.PI*2);
+            ctx.fill();
+            setTimeout(() => ctx.clearRect(0,0,CFG.w,CFG.h), 200);
+        }
+
+        function setTool(t) {
+            STATE.tool = t;
+            document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
+            event.target.closest('button').classList.add('active');
+        }
+
+        function updateUI() {
+            document.getElementById('ui-bio').innerText = Math.floor(STATE.bio);
+            document.getElementById('ui-seeds').innerText = STATE.seeds;
+            document.getElementById('ui-species').innerText = STATE.discoveredSpecies.size;
+            document.getElementById('ui-fauna-count').innerText = `${STATE.animals.length} Seres Vivos`;
+        }
 
     </script>
 </body>
