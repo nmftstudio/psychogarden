@@ -9,10 +9,9 @@
         :root {
             --gold: #d4af37;
             --emerald: #2d5a27;
-            --clay: #a67c52;
             --void: #050705;
-            --glass: rgba(10, 15, 10, 0.85);
-            --border: rgba(212, 175, 55, 0.2);
+            --glass: rgba(10, 15, 10, 0.9);
+            --border: rgba(212, 175, 55, 0.3);
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -21,13 +20,11 @@
             color: #e0eadd; 
             font-family: 'Libre Baskerville', serif; 
             overflow: hidden;
-            cursor: crosshair;
         }
 
-        canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+        canvas { position: absolute; top: 0; left: 0; display: block; }
         #fxCanvas { pointer-events: none; z-index: 5; }
 
-        /* --- UI OVERLAY --- */
         #interface {
             position: absolute; z-index: 100; width: 100%; height: 100%;
             pointer-events: none; display: flex; flex-direction: column;
@@ -37,60 +34,45 @@
         .hud-top { display: flex; justify-content: space-between; pointer-events: auto; }
         .data-box { 
             background: var(--glass); border: 1px solid var(--border);
-            padding: 15px 25px; border-radius: 4px; backdrop-filter: blur(10px);
+            padding: 12px 20px; border-radius: 4px; backdrop-filter: blur(10px);
         }
         .data-box label { font-family: 'Space Mono', monospace; font-size: 10px; text-transform: uppercase; color: var(--gold); display: block; }
-        .data-box span { font-size: 24px; font-weight: 700; }
+        .data-box span { font-size: 20px; font-weight: 700; }
 
-        /* --- MENÚ LATERAL (NEXUS) --- */
         .nexus-nav { 
             position: absolute; left: 30px; top: 50%; transform: translateY(-50%);
-            display: flex; flex-direction: column; gap: 20px; pointer-events: auto;
+            display: flex; flex-direction: column; gap: 15px; pointer-events: auto;
         }
         .nexus-btn {
-            width: 50px; height: 50px; border: 1px solid var(--border);
+            width: 45px; height: 45px; border: 1px solid var(--border);
             background: var(--glass); color: var(--gold); border-radius: 50%;
-            cursor: pointer; transition: 0.4s; font-size: 18px;
+            cursor: pointer; transition: 0.3s; font-size: 18px;
         }
-        .nexus-btn:hover { background: var(--gold); color: var(--void); transform: scale(1.1) rotate(15deg); }
+        .nexus-btn:hover { background: var(--gold); color: var(--void); transform: scale(1.1); }
 
-        /* --- TOOLBAR INFERIOR --- */
         .toolbar { 
-            display: flex; justify-content: center; gap: 15px; pointer-events: auto;
-            margin-bottom: 20px;
+            display: flex; justify-content: center; gap: 10px; pointer-events: auto;
+            margin-bottom: 10px;
         }
         .tool {
-            padding: 12px 25px; background: var(--glass); border: 1px solid var(--border);
+            padding: 10px 20px; background: var(--glass); border: 1px solid var(--border);
             color: #fff; cursor: pointer; font-family: 'Space Mono', monospace;
-            text-transform: uppercase; font-size: 12px; transition: 0.3s;
+            text-transform: uppercase; font-size: 11px; transition: 0.2s;
         }
         .tool.active { border-color: var(--gold); background: rgba(212, 175, 55, 0.1); color: var(--gold); }
 
-        /* --- MODALES --- */
         .modal {
-            position: fixed; inset: 0; background: rgba(0,0,0,0.95);
+            position: fixed; inset: 0; background: rgba(0,0,0,0.9);
             display: none; align-items: center; justify-content: center; z-index: 1000;
             pointer-events: auto;
         }
         .modal-content {
-            width: 600px; padding: 50px; border: 1px solid var(--gold);
-            background: var(--void); position: relative; text-align: center;
+            width: 90%; max-width: 500px; padding: 40px; border: 1px solid var(--gold);
+            background: var(--void); text-align: center;
         }
-        .close-modal { position: absolute; top: 20px; right: 20px; color: var(--gold); cursor: pointer; }
-
-        /* Estilo para los ítems del mercado */
-        .market-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 30px; }
-        .market-item { 
-            border: 1px solid var(--border); padding: 20px; cursor: pointer; 
-            transition: 0.3s;
-        }
-        .market-item:hover { border-color: var(--gold); background: #0a0f0a; }
-
-        /* Clima Visual */
-        #weather-shroud {
-            position: fixed; inset: 0; pointer-events: none; z-index: 10;
-            transition: 3s;
-        }
+        .market-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 20px; }
+        .market-item { border: 1px solid var(--border); padding: 15px; cursor: pointer; }
+        .market-item:hover { border-color: var(--gold); }
     </style>
 </head>
 <body>
@@ -98,300 +80,159 @@
     <canvas id="skyCanvas"></canvas>
     <canvas id="mainCanvas"></canvas>
     <canvas id="fxCanvas"></canvas>
-    <div id="weather-shroud"></div>
 
     <div id="interface">
         <div class="hud-top">
             <div class="data-box">
-                <label>Energy Reserve</label>
-                <span id="stat-bio">0</span>
+                <label>Energy</label>
+                <span id="stat-bio">1000</span>
             </div>
             <div class="data-box" style="text-align: right;">
-                <label>Ecosystem Flux</label>
+                <label>Flux</label>
                 <span id="stat-weather">Stable</span>
             </div>
         </div>
 
         <div class="nexus-nav">
-            <button class="nexus-btn" onclick="openModule('market')" title="Market">🛒</button>
-            <button class="nexus-btn" onclick="openModule('dna')" title="Splicer">🧬</button>
-            <button class="nexus-btn" onclick="openModule('swarm')" title="Swarm Control">🐝</button>
-            <button class="nexus-btn" onclick="openModule('photons')" title="Photon Sync">☀️</button>
+            <button class="nexus-btn" onclick="openModule('market')">🛒</button>
+            <button class="nexus-btn" onclick="openModule('dna')">🧬</button>
+            <button class="nexus-btn" onclick="openModule('swarm')">🐝</button>
         </div>
 
         <div class="toolbar">
-            <button class="tool active" id="tool-plant" onclick="setTool('plant')">Plant Seed</button>
-            <button class="tool" id="tool-extract" onclick="setTool('extract')">Extract Essence</button>
-            <button class="tool" id="tool-inspect" onclick="setTool('inspect')">Inspect DNA</button>
+            <button class="tool active" id="tool-plant" onclick="setTool('plant')">Plant</button>
+            <button class="tool" id="tool-extract" onclick="setTool('extract')">Extract</button>
         </div>
     </div>
 
     <div id="modal" class="modal">
         <div class="modal-content">
-            <span class="close-modal" onclick="closeModal()">[ CLOSE ]</span>
             <div id="modal-inner"></div>
+            <button class="tool" style="margin-top:20px" onclick="closeModal()">Return</button>
         </div>
     </div>
 
     <script>
-        /**
-         * AETERNA CORE ENGINE
-         * Coded with high-performance procedural logic.
-         */
-
         const STATE = {
-            bio: 1000,
-            plants: [],
-            fauna: [],
-            entities: [],
-            tool: 'plant',
-            horizon: window.innerHeight * 0.52,
-            weather: 'clear',
-            weatherTick: 0
+            bio: 1000, plants: [], entities: [],
+            tool: 'plant', horizon: 0,
+            colors: { gold: '#d4af37', emerald: '#2d5a27', void: '#050705' }
         };
 
-        const CTX = {
-            sky: document.getElementById('skyCanvas').getContext('2d'),
-            main: document.getElementById('mainCanvas').getContext('2d'),
-            fx: document.getElementById('fxCanvas').getContext('2d')
-        };
+        const canvasM = document.getElementById('mainCanvas');
+        const canvasS = document.getElementById('skyCanvas');
+        const ctxM = canvasM.getContext('2d');
+        const ctxS = canvasS.getContext('2d');
 
-        // --- SISTEMA DE ADN PROCEDURAL ---
-        class DNA {
-            constructor(parent = null) {
-                this.hue = parent ? parent.hue + (Math.random()*20-10) : 100 + Math.random()*60;
-                this.complexity = parent ? parent.complexity : 4 + Math.floor(Math.random()*3);
-                this.split = parent ? parent.split : 0.4 + Math.random()*0.4;
-                this.growthRate = 0.002 + Math.random()*0.003;
-                this.attracts = Math.random() > 0.5 ? 'insect' : 'bird';
-            }
-        }
-
-        // --- CLASE PLANTA (CRECIMIENTO RECURSIVO) ---
         class Plant {
-            constructor(x, y, dna) {
+            constructor(x, y) {
                 this.x = x; this.y = y;
-                this.dna = dna || new DNA();
                 this.growth = 0;
                 this.age = 0;
-                this.isDead = false;
+                this.hue = 100 + Math.random() * 40;
+                this.split = 0.4 + Math.random() * 0.3;
             }
-
             update() {
-                if(this.growth < 1) this.growth += this.dna.growthRate;
-                this.age += 0.01;
-                // Atracción de fauna aleatoria
-                if(this.growth > 0.8 && Math.random() < 0.001) spawnCreature(this);
+                if(this.growth < 1) this.growth += 0.005;
+                this.age += 0.02;
             }
-
             draw(ctx) {
                 ctx.save();
                 ctx.translate(this.x, this.y);
-                this.renderBranch(ctx, 70 * this.growth, 0, this.dna.complexity);
+                this.renderBranch(ctx, 60 * this.growth, 0, 5);
                 ctx.restore();
             }
-
             renderBranch(ctx, len, angle, depth) {
-                if(depth <= 0) {
-                    this.drawLeaf(ctx);
-                    return;
-                }
-
+                if(depth <= 0) return;
                 ctx.save();
-                ctx.rotate(angle + Math.sin(this.age + len)*0.03);
-                
-                // Rama con gradiente
-                ctx.strokeStyle = `hsl(${this.dna.hue}, 30%, ${15 + (6-depth)*6}%)`;
-                ctx.lineWidth = depth * 1.5;
-                ctx.lineCap = 'round';
-                
-                ctx.beginPath();
-                ctx.moveTo(0, 0);
-                ctx.lineTo(0, -len);
-                ctx.stroke();
-
+                ctx.rotate(angle + Math.sin(this.age + len) * 0.02);
+                ctx.strokeStyle = `hsl(${this.hue}, 30%, ${10 + (6-depth)*8}%)`;
+                ctx.lineWidth = depth * 1.2;
+                ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(0, -len); ctx.stroke();
                 ctx.translate(0, -len);
-                this.renderBranch(ctx, len * 0.75, this.dna.split, depth - 1);
-                this.renderBranch(ctx, len * 0.75, -this.dna.split, depth - 1);
-                
+                this.renderBranch(ctx, len * 0.75, this.split, depth - 1);
+                this.renderBranch(ctx, len * 0.75, -this.split, depth - 1);
                 ctx.restore();
-            }
-
-            drawLeaf(ctx) {
-                ctx.fillStyle = `hsl(${this.dna.hue}, 60%, 40%)`;
-                ctx.beginPath();
-                ctx.ellipse(0, 0, 6, 3, 0, 0, Math.PI*2);
-                ctx.fill();
             }
         }
 
-        // --- EL OBSERVADOR (ENTIDAD HUMANOIDE AI) ---
         class Observer {
             constructor() {
-                this.x = -100;
+                this.x = -50; this.y = STATE.horizon;
                 this.targetX = Math.random() * window.innerWidth;
-                this.y = STATE.horizon;
-                this.speed = 0.8;
-                this.state = 'walking'; // 'walking', 'observing', 'planting'
+                this.speed = 0.7;
             }
-
             update() {
-                if(this.state === 'walking') {
-                    this.x += this.speed;
-                    if(Math.abs(this.x - this.targetX) < 5) this.state = 'observing';
-                } else if(this.state === 'observing') {
-                    if(Math.random() < 0.01) {
-                        this.state = 'planting';
-                        setTimeout(() => this.performAction(), 1000);
-                    }
+                this.x += this.speed;
+                if(Math.abs(this.x - this.targetX) < 5 && Math.random() < 0.01) {
+                    STATE.plants.push(new Plant(this.x, STATE.horizon));
+                    this.targetX = this.x + 200 + Math.random()*300;
                 }
                 return this.x < window.innerWidth + 100;
             }
-
-            performAction() {
-                STATE.plants.push(new Plant(this.x, STATE.horizon));
-                createParticleExplosion(this.x, this.y - 20, var(--gold));
-                this.targetX = this.x + 200 + Math.random()*400;
-                this.state = 'walking';
-            }
-
             draw(ctx) {
-                ctx.save();
-                ctx.translate(this.x, this.y);
-                ctx.fillStyle = "rgba(255,255,255,0.8)";
-                // Silueta estilizada
-                ctx.fillRect(-3, -35, 6, 25); 
-                ctx.beginPath(); ctx.arc(0, -40, 4, 0, Math.PI*2); ctx.fill();
-                // Glow
-                ctx.shadowBlur = 15; ctx.shadowColor = "white";
-                ctx.restore();
+                ctx.fillStyle = "white";
+                ctx.fillRect(this.x - 2, this.y - 30, 4, 20);
+                ctx.beginPath(); ctx.arc(this.x, this.y - 35, 4, 0, Math.PI*2); ctx.fill();
             }
         }
 
-        // --- SISTEMA DE FAUNA ---
-        class Creature {
-            constructor(plant) {
-                this.x = plant.x;
-                this.y = plant.y - 50;
-                this.tx = this.x + (Math.random()*200-100);
-                this.ty = this.y + (Math.random()*100-200);
-                this.life = 1000;
-            }
-            update() {
-                this.x += (this.tx - this.x) * 0.01;
-                this.y += (this.ty - this.y) * 0.01;
-                if(Math.random() < 0.02) {
-                    this.tx = this.x + (Math.random()*100-50);
-                    this.ty = this.y + (Math.random()*100-50);
-                }
-                this.life--;
-            }
-            draw(ctx) {
-                ctx.fillStyle = var(--gold);
-                ctx.beginPath(); ctx.arc(this.x, this.y, 2, 0, Math.PI*2); ctx.fill();
-            }
-        }
-
-        // --- MOTOR PRINCIPAL ---
         function init() {
             resize();
             window.addEventListener('resize', resize);
-            window.addEventListener('mousedown', handleInput);
-            
-            // Loop Infinito
+            canvasM.addEventListener('mousedown', handleInput);
             requestAnimationFrame(loop);
             
             // Spawn inicial
             for(let i=0; i<3; i++) STATE.plants.push(new Plant(Math.random()*window.innerWidth, STATE.horizon));
-            
-            // Aparece el Observador cada tanto
-            setInterval(() => {
-                if(STATE.entities.length < 1) STATE.entities.push(new Observer());
-            }, 30000);
+            setInterval(() => { if(STATE.entities.length < 1) STATE.entities.push(new Observer()); }, 15000);
         }
 
         function resize() {
-            STATE.horizon = window.innerHeight * 0.55;
-            [document.getElementById('skyCanvas'), document.getElementById('mainCanvas'), document.getElementById('fxCanvas')].forEach(c => {
+            STATE.horizon = window.innerHeight * 0.6;
+            [canvasM, canvasS].forEach(c => {
                 c.width = window.innerWidth;
                 c.height = window.innerHeight;
             });
         }
 
         function loop() {
-            const ctxM = CTX.main;
-            const ctxS = CTX.sky;
+            // Fondo
+            ctxS.fillStyle = STATE.colors.void;
+            ctxS.fillRect(0,0, canvasS.width, canvasS.height);
             
-            // Render Sky & Horizon
-            ctxS.fillStyle = '#050705';
-            ctxS.fillRect(0,0, window.innerWidth, window.innerHeight);
+            ctxM.clearRect(0,0, canvasM.width, canvasM.height);
             
-            ctxM.clearRect(0,0, window.innerWidth, window.innerHeight);
-            
-            // Suelo con textura
+            // Suelo
             ctxM.fillStyle = '#080a08';
-            ctxM.fillRect(0, STATE.horizon, window.innerWidth, window.innerHeight);
+            ctxM.fillRect(0, STATE.horizon, canvasM.width, canvasM.height);
             
-            // Actualizar Plantas
+            // Plantas
             STATE.plants.forEach(p => { p.update(); p.draw(ctxM); });
             
-            // Actualizar Entidades
+            // Entidades
             STATE.entities = STATE.entities.filter(e => {
-                const alive = e.update();
+                const active = e.update();
                 e.draw(ctxM);
-                return alive;
+                return active;
             });
 
-            // Actualizar Fauna
-            STATE.fauna = STATE.fauna.filter(f => {
-                f.update();
-                f.draw(ctxM);
-                return f.life > 0;
-            });
-
-            // UI Update
             document.getElementById('stat-bio').innerText = Math.floor(STATE.bio);
-            document.getElementById('stat-weather').innerText = STATE.weather.toUpperCase();
-
-            // Clima Logic
-            handleWeather();
-
             requestAnimationFrame(loop);
         }
 
-        // --- SISTEMA DE CLIMA ---
-        function handleWeather() {
-            STATE.weatherTick++;
-            if(STATE.weatherTick > 1000) {
-                const weathers = ['clear', 'fog', 'bio-storm'];
-                STATE.weather = weathers[Math.floor(Math.random()*weathers.length)];
-                STATE.weatherTick = 0;
-                
-                const shroud = document.getElementById('weather-shroud');
-                if(STATE.weather === 'fog') shroud.style.background = 'rgba(200,200,200,0.05)';
-                else if(STATE.weather === 'bio-storm') shroud.style.background = 'rgba(50,100,50,0.1)';
-                else shroud.style.background = 'transparent';
-            }
-            if(STATE.weather === 'bio-storm') STATE.bio += 0.1; // La tormenta da energía
-        }
-
-        // --- INPUT & TOOLS ---
         function handleInput(e) {
-            if(e.target.tagName !== 'CANVAS') return;
             const x = e.clientX;
             const y = e.clientY;
-
-            if(STATE.tool === 'plant' && y > STATE.horizon - 50) {
+            if(STATE.tool === 'plant' && y > STATE.horizon - 100) {
                 if(STATE.bio >= 50) {
                     STATE.bio -= 50;
                     STATE.plants.push(new Plant(x, STATE.horizon));
-                    createParticleExplosion(x, STATE.horizon, '#2d5a27');
                 }
             } else if(STATE.tool === 'extract') {
                 STATE.plants = STATE.plants.filter(p => {
-                    if(Math.hypot(p.x - x, p.y - y) < 50) {
-                        STATE.bio += 150;
-                        createParticleExplosion(x, y, '#d4af37');
+                    if(Math.hypot(p.x - x, p.y - y) < 40) {
+                        STATE.bio += 120;
                         return false;
                     }
                     return true;
@@ -405,67 +246,25 @@
             document.getElementById(`tool-${t}`).classList.add('active');
         }
 
-        // --- MODALES (MINIJUEGOS Y MERCADO) ---
         function openModule(type) {
-            const m = document.getElementById('modal');
+            document.getElementById('modal').style.display = 'flex';
             const inner = document.getElementById('modal-inner');
-            m.style.display = 'flex';
-
             if(type === 'market') {
-                inner.innerHTML = `
-                    <h2>Biological Exchange</h2>
-                    <div class="market-grid">
-                        <div class="market-item" onclick="buy('super-seed')"><h3>Seed Pro</h3><p>DNA Refinado</p><span>100 Bio</span></div>
-                        <div class="market-item" onclick="buy('rain')"><h3>Cloud Seeding</h3><p>Cambiar Clima</p><span>300 Bio</span></div>
-                    </div>
-                `;
+                inner.innerHTML = `<h2>Market</h2><div class="market-grid">
+                    <div class="market-item" onclick="STATE.bio+=500; closeModal()">Buy Energy (+500)</div>
+                    <div class="market-item" onclick="STATE.plants.push(new Plant(Math.random()*800, STATE.horizon)); closeModal()">Instant Tree</div>
+                </div>`;
             } else if(type === 'dna') {
-                inner.innerHTML = `
-                    <h2>Splicer Terminal</h2>
-                    <p>Haz clic rítmicamente en el átomo para generar energía.</p>
-                    <div style="font-size:50px; margin:30px; cursor:pointer;" onclick="STATE.bio+=10">⚛️</div>
-                `;
+                inner.innerHTML = `<h2>Splicer</h2><p>Click the Atom</p><div style="font-size:40px; margin:20px; cursor:pointer" onclick="STATE.bio+=10">⚛️</div>`;
             } else if(type === 'swarm') {
-                inner.innerHTML = `
-                    <h2>Swarm Control</h2>
-                    <p>Ganas +5 Bio por cada segundo en este modo.</p>
-                    <div style="height:100px; display:flex; align-items:center; justify-content:center;">🐝🐝🐝</div>
-                `;
-                STATE.swarmInterval = setInterval(() => STATE.bio += 5, 1000);
-            } else if(type === 'photons') {
-                inner.innerHTML = `
-                    <h2>Photon Sync</h2>
-                    <button class="tool" onclick="STATE.bio+=500; closeModal()">ABSORBER DESTELLO (+500)</button>
-                `;
+                inner.innerHTML = `<h2>Swarm</h2><p>Generating bio-energy...</p>`;
+                STATE.swarmInt = setInterval(() => STATE.bio += 2, 1000);
             }
         }
 
         function closeModal() {
             document.getElementById('modal').style.display = 'none';
-            clearInterval(STATE.swarmInterval);
-        }
-
-        function buy(item) {
-            if(STATE.bio >= 100) {
-                STATE.bio -= 100;
-                STATE.plants.push(new Plant(Math.random()*window.innerWidth, STATE.horizon));
-                closeModal();
-            }
-        }
-
-        function createParticleExplosion(x, y, color) {
-            const fx = CTX.fx;
-            fx.fillStyle = color;
-            for(let i=0; i<10; i++) {
-                fx.beginPath();
-                fx.arc(x + (Math.random()*40-20), y + (Math.random()*40-20), 2, 0, Math.PI*2);
-                fx.fill();
-            }
-            setTimeout(() => fx.clearRect(0,0, window.innerWidth, window.innerHeight), 500);
-        }
-
-        function spawnCreature(plant) {
-            STATE.fauna.push(new Creature(plant));
+            clearInterval(STATE.swarmInt);
         }
 
         init();
