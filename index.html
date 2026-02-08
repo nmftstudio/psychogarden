@@ -3,342 +3,383 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>🌿 Psychogarden | Professional Neural Edition</title>
+    <title>Psychogarden | Fractal Bloom Edition</title>
     <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Work+Sans:wght@300;400;600&display=swap" rel="stylesheet">
     <style>
         :root {
-            --primary: #2d5016;
-            --primary-light: #4a7c2e;
-            --accent: #f4a261;
-            --bg-dark: #0d1b0a;
-            --text: #f8f4e8;
-            --glass: rgba(13, 27, 10, 0.9);
             --gold: #d4af37;
+            --void: #030503;
+            --glass: rgba(15, 25, 15, 0.7);
+            --border: rgba(212, 175, 55, 0.2);
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { 
-            background: var(--bg-dark); 
-            color: var(--text); 
+            background: var(--void); 
+            color: #f0f0f0; 
             font-family: 'Work Sans', sans-serif; 
-            overflow: hidden; 
-            transition: filter 1s ease;
+            overflow: hidden;
+            transition: filter 1.2s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         canvas { position: absolute; top: 0; left: 0; }
-        #skyCanvas { z-index: 0; }
-        #gameCanvas { z-index: 1; }
-        #fxCanvas { z-index: 5; pointer-events: none; }
+        #lightingCanvas { pointer-events: none; z-index: 4; mix-blend-mode: screen; }
 
-        /* --- CHARACTER SELECTION (Recuperado) --- */
-        #selectionOverlay {
-            position: fixed; inset: 0; background: var(--bg-dark);
-            z-index: 2000; display: flex; flex-direction: column; align-items: center; justify-content: center;
+        /* --- UI GLASSMORPHISM --- */
+        #ui {
+            position: absolute; z-index: 100; width: 100%; height: 100%;
+            pointer-events: none; padding: 30px; display: flex; flex-direction: column;
+            justify-content: space-between;
         }
-        .char-grid { display: flex; gap: 30px; margin-top: 40px; }
-        .char-card {
-            background: var(--glass); border: 1px solid rgba(255,255,255,0.1);
-            padding: 30px; cursor: pointer; transition: 0.3s; text-align: center;
-        }
-        .char-card:hover { border-color: var(--accent); transform: translateY(-10px); }
 
-        /* --- UI OVERLAY --- */
-        #uiLayer { position: absolute; z-index: 100; width: 100%; height: 100%; pointer-events: none; }
-
-        .top-hud {
-            position: absolute; top: 30px; width: 100%;
-            display: flex; justify-content: space-around; pointer-events: auto;
+        .glass-panel {
+            background: var(--glass);
+            backdrop-filter: blur(15px) saturate(150%);
+            -webkit-backdrop-filter: blur(15px) saturate(150%);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 15px 25px;
+            pointer-events: auto;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.5);
         }
-        .stat-card {
-            background: var(--glass); padding: 12px 25px; border-radius: 4px;
-            border: 1px solid rgba(255,255,255,0.1); backdrop-filter: blur(10px);
-        }
-        .stat-card label { display: block; font-size: 10px; text-transform: uppercase; color: var(--accent); }
-        .stat-card span { font-family: 'Libre Baskerville', serif; font-size: 22px; font-weight: 700; }
 
-        /* --- MENU NEXUS (DERECHA) --- */
-        .nexus-menu {
+        .hud-top { display: flex; justify-content: space-between; }
+        .stat-group label { display: block; font-size: 10px; text-transform: uppercase; color: var(--gold); letter-spacing: 2px; }
+        .stat-group span { font-family: 'Libre Baskerville', serif; font-size: 24px; font-weight: 700; }
+
+        .nexus-rail {
             position: absolute; right: 30px; top: 50%; transform: translateY(-50%);
             display: flex; flex-direction: column; gap: 15px; pointer-events: auto;
         }
+
         .nexus-btn {
-            width: 55px; height: 55px; background: var(--glass); border: 1px solid var(--accent);
-            color: var(--accent); font-size: 20px; border-radius: 50%; cursor: pointer;
-            transition: 0.3s; display: flex; align-items: center; justify-content: center;
+            width: 50px; height: 50px; border-radius: 10px;
+            background: var(--glass); border: 1px solid var(--border);
+            color: var(--gold); cursor: pointer; transition: 0.3s;
+            display: flex; align-items: center; justify-content: center; font-size: 20px;
         }
-        .nexus-btn:hover { background: var(--accent); color: var(--bg-dark); }
+        .nexus-btn:hover { background: var(--gold); color: var(--void); box-shadow: 0 0 20px var(--gold); }
 
-        /* --- TOOLBAR (ABAJO) --- */
-        .toolbar {
-            position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%);
-            display: flex; gap: 15px; pointer-events: auto;
+        .controls { display: flex; justify-content: center; gap: 15px; margin-bottom: 20px; }
+        .btn-action {
+            padding: 12px 30px; border-radius: 40px; border: 1px solid var(--border);
+            background: var(--glass); color: #fff; cursor: pointer;
+            font-family: 'Work Sans', sans-serif; font-weight: 600; text-transform: uppercase;
+            letter-spacing: 1px; transition: 0.3s; pointer-events: auto;
         }
-        .tool {
-            padding: 12px 25px; background: var(--glass); border: 1px solid rgba(255,255,255,0.1);
-            color: #fff; cursor: pointer; border-radius: 30px; transition: 0.3s;
-        }
-        .tool.active { background: var(--primary-light); border-color: var(--accent); }
+        .btn-action.active { background: var(--gold); color: var(--void); border-color: #fff; }
 
-        /* --- MODALES --- */
+        /* MODAL */
         .modal {
-            position: fixed; inset: 0; background: rgba(0,0,0,0.95);
-            display: none; align-items: center; justify-content: center; z-index: 1500;
+            position: fixed; inset: 0; background: rgba(0,0,0,0.85);
+            display: none; align-items: center; justify-content: center; z-index: 1000;
         }
-        .modal-content {
-            width: 90%; max-width: 600px; background: var(--bg-dark);
-            padding: 50px; border: 1px solid var(--primary-light); text-align: center;
+        .modal-box {
+            width: 450px; background: var(--void); border: 1px solid var(--gold);
+            padding: 40px; text-align: center; border-radius: 4px;
         }
-        .back-btn { margin-top: 30px; padding: 10px 30px; background: var(--accent); border: none; cursor: pointer; }
 
+        #loading {
+            position: fixed; inset: 0; background: var(--void); z-index: 5000;
+            display: flex; align-items: center; justify-content: center;
+        }
     </style>
 </head>
 <body>
 
-    <canvas id="skyCanvas"></canvas>
-    <canvas id="gameCanvas"></canvas>
-    <canvas id="fxCanvas"></canvas>
+    <div id="loading"><h2 style="color:var(--gold); letter-spacing: 5px;">INICIALIZANDO NEURAL-NET...</h2></div>
 
-    <div id="selectionOverlay">
-        <h1 style="font-family: 'Libre Baskerville', serif; font-size: 40px;">Psychogarden</h1>
-        <p>Selecciona tu linaje genético</p>
-        <div class="char-grid">
-            <div class="char-card" onclick="startGame('Alquimista')">
-                <h3>🧪 Alquimista</h3>
-                <p>+20% Biomasa por planta</p>
+    <canvas id="skyCvs"></canvas>
+    <canvas id="mainCvs"></canvas>
+    <canvas id="lightingCvs"></canvas>
+
+    <div id="ui">
+        <div class="hud-top">
+            <div class="glass-panel stat-group">
+                <label>Energy Reserve</label>
+                <span id="bio-val">1000</span>
             </div>
-            <div class="char-card" onclick="startGame('Chamán')">
-                <h3>👁️ Chamán</h3>
-                <p>Plantas Psicoactivas puras</p>
+            <div class="glass-panel stat-group" style="text-align: right;">
+                <label>World State</label>
+                <span id="world-state">Stable</span>
             </div>
         </div>
-    </div>
 
-    <div id="uiLayer">
-        <div class="top-hud">
-            <div class="stat-card"><label>Biomasa</label><span id="stat-bio">500</span></div>
-            <div class="stat-card"><label>Percepción</label><span id="stat-flux">Lúcida</span></div>
-            <div class="stat-card"><label>Clima</label><span id="stat-weather">Calmo</span></div>
+        <div class="nexus-rail">
+            <button class="nexus-btn" onclick="uiAction('market')">🛒</button>
+            <button class="nexus-btn" onclick="uiAction('dna')">🧬</button>
+            <button class="nexus-btn" onclick="uiAction('swarm')">🐝</button>
         </div>
 
-        <div class="nexus-menu">
-            <button class="nexus-btn" onclick="openModal('shop')">🛒</button>
-            <button class="nexus-btn" onclick="openModal('game1')">🧬</button>
-            <button class="nexus-btn" onclick="openModal('game2')">🐝</button>
-            <button class="nexus-btn" onclick="openModal('game3')">☀️</button>
-        </div>
-
-        <div class="toolbar">
-            <button class="tool active" id="btn-seed" onclick="setTool('seed')">🌱 Sembrar</button>
-            <button class="tool" id="btn-harvest" onclick="setTool('harvest')">✨ Cosechar</button>
+        <div class="controls">
+            <button class="btn-action active" id="tool-seed" onclick="setTool('seed')">Plant Seed</button>
+            <button class="btn-action" id="tool-harvest" onclick="setTool('harvest')">Extract</button>
         </div>
     </div>
 
     <div id="modal" class="modal">
-        <div class="modal-content">
-            <div id="modal-inner"></div>
-            <button class="back-btn" onclick="closeModal()">VOLVER AL JARDÍN</button>
+        <div class="modal-box glass-panel">
+            <div id="modal-content"></div>
+            <button class="btn-action" style="margin-top:20px; width:100%" onclick="closeModal()">Sync & Return</button>
         </div>
     </div>
 
     <script>
         /**
-         * PSYCHOGARDEN ENGINE: PRO NEURAL
+         * PSYCHOGARDEN: FRACTAL BLOOM ENGINE
+         * High-End Procedural Rendering
          */
 
-        const State = {
-            bio: 500, plants: [], entities: [], insects: [], 
-            tool: 'seed', horizon: 0, weather: 'sunny',
-            tripLevel: 0, char: '',
-            colors: { stim: '#4ade80', sed: '#60a5fa', hall: '#a855f7' }
+        const Engine = {
+            state: {
+                bio: 1200, plants: [], entities: [],
+                time: 0, tool: 'seed', horizon: 0,
+                wind: 0, trip: 0
+            },
+            ctx: {},
+            
+            init() {
+                this.ctx.sky = document.getElementById('skyCvs').getContext('2d');
+                this.ctx.main = document.getElementById('mainCvs').getContext('2d');
+                this.ctx.light = document.getElementById('lightingCvs').getContext('2d');
+                
+                window.onresize = () => this.resize();
+                this.resize();
+
+                // Interacción
+                document.getElementById('mainCvs').onmousedown = (e) => this.handleClick(e);
+
+                // Start Loop
+                requestAnimationFrame((t) => this.loop(t));
+                
+                // Spawn Inicial
+                setTimeout(() => {
+                    document.getElementById('loading').style.opacity = 0;
+                    setTimeout(() => document.getElementById('loading').remove(), 1000);
+                    this.spawnInitial();
+                }, 1500);
+            },
+
+            resize() {
+                this.state.horizon = window.innerHeight * 0.58;
+                [document.getElementById('skyCvs'), document.getElementById('mainCvs'), document.getElementById('lightingCvs')].forEach(c => {
+                    c.width = window.innerWidth;
+                    c.height = window.innerHeight;
+                });
+            },
+
+            spawnInitial() {
+                for(let i=0; i<3; i++) this.state.plants.push(new Plant(Math.random()*window.innerWidth, this.state.horizon));
+                setInterval(() => { if(this.state.entities.length < 1) this.state.entities.push(new Observer()); }, 15000);
+            },
+
+            handleClick(e) {
+                const x = e.clientX; const y = e.clientY;
+                if(this.state.tool === 'seed' && y > this.state.horizon - 100) {
+                    if(this.state.bio >= 100) {
+                        this.state.bio -= 100;
+                        this.state.plants.push(new Plant(x, this.state.horizon));
+                    }
+                } else if(this.state.tool === 'harvest') {
+                    this.state.plants = this.state.plants.filter(p => {
+                        if(Math.hypot(p.x - x, p.y - y) < 50) { this.state.bio += 250; return false; }
+                        return true;
+                    });
+                }
+            },
+
+            loop(t) {
+                this.state.time = t * 0.001;
+                this.state.wind = Math.sin(this.state.time * 0.5) * 0.02 + Math.sin(this.state.time * 2) * 0.005;
+
+                this.drawSky();
+                this.drawWorld();
+                this.updateUI();
+
+                requestAnimationFrame((t) => this.loop(t));
+            },
+
+            drawSky() {
+                const c = this.ctx.sky;
+                const g = c.createLinearGradient(0, 0, 0, window.innerHeight);
+                g.addColorStop(0, '#050a05');
+                g.addColorStop(1, '#020402');
+                c.fillStyle = g;
+                c.fillRect(0, 0, window.innerWidth, window.innerHeight);
+            },
+
+            drawWorld() {
+                const ctx = this.ctx.main;
+                const ltx = this.ctx.light;
+                ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
+                ltx.clearRect(0, 0, window.innerWidth, window.innerHeight);
+
+                // Suelo
+                ctx.fillStyle = '#050705';
+                ctx.fillRect(0, this.state.horizon, window.innerWidth, window.innerHeight);
+
+                // Render Plantas con Bloom
+                this.state.plants.forEach(p => {
+                    p.update(this.state.wind);
+                    p.draw(ctx, ltx);
+                });
+
+                // Render Entidades
+                this.state.entities = this.state.entities.filter(e => {
+                    const active = e.update(this.state.plants);
+                    e.draw(ctx);
+                    return active;
+                });
+
+                // Efecto Global Psicoactivo
+                if(this.state.trip > 0.1) {
+                    document.body.style.filter = `hue-rotate(${Date.now()*0.05}deg) saturate(2)`;
+                    this.state.trip *= 0.995;
+                } else {
+                    document.body.style.filter = 'none';
+                }
+            },
+
+            updateUI() {
+                document.getElementById('bio-val').innerText = Math.floor(this.state.bio);
+                document.getElementById('world-state').innerText = this.state.trip > 0.1 ? 'ALTERED' : 'LUCID';
+            }
         };
 
-        const Canvases = {
-            sky: document.getElementById('skyCanvas'),
-            game: document.getElementById('gameCanvas'),
-            fx: document.getElementById('fxCanvas')
-        };
-
-        // --- CLASE PLANTA (Crecimiento Fractal Profesional) ---
+        // --- CLASE PLANTA: FRACTAL REAL-TIME ---
         class Plant {
             constructor(x, y) {
                 this.x = x; this.y = y;
+                this.dna = {
+                    hue: 100 + Math.random()*150,
+                    angle: 0.3 + Math.random()*0.4,
+                    complexity: 5 + Math.floor(Math.random()*2),
+                    growthSpeed: 0.002 + Math.random()*0.002
+                };
                 this.growth = 0;
                 this.age = 0;
-                this.type = ['stim', 'sedative', 'trippy'][Math.floor(Math.random()*3)];
-                this.hue = this.type === 'stim' ? 120 : (this.type === 'sedative' ? 210 : 280);
-                this.consumed = false;
+                this.windMod = 0;
+                this.isHigh = Math.random() > 0.7; // Bioluminiscente
             }
-            update() {
-                if(!this.consumed && this.growth < 1) this.growth += 0.002;
+
+            update(globalWind) {
+                if(this.growth < 1) this.growth += this.dna.growthSpeed;
                 this.age += 0.01;
+                this.windMod = globalWind;
             }
-            draw(ctx) {
-                if(this.consumed) return;
+
+            draw(ctx, ltx) {
                 ctx.save();
                 ctx.translate(this.x, this.y);
-                this.renderRecursive(ctx, 60 * this.growth, 0, 5);
+                this.branch(ctx, ltx, 70 * this.growth, 0, this.dna.complexity);
                 ctx.restore();
             }
-            renderRecursive(ctx, len, angle, depth) {
-                if(depth <= 0) return;
+
+            branch(ctx, ltx, len, angle, depth) {
+                if(depth <= 0) {
+                    this.drawFlower(ctx, ltx);
+                    return;
+                }
+
                 ctx.save();
-                ctx.rotate(angle + Math.sin(this.age + len)*0.03);
-                ctx.strokeStyle = `hsl(${this.hue}, 40%, ${15 + (6-depth)*6}%)`;
+                // FÍSICA DE VIENTO NOISE: Más oscilación en las puntas (depth bajo)
+                const windEffect = this.windMod * (6 - depth) * 1.5;
+                ctx.rotate(angle + windEffect);
+
+                // Estilo de Rama
+                ctx.strokeStyle = `hsl(${this.dna.hue}, 30%, ${10 + (6-depth)*8}%)`;
                 ctx.lineWidth = depth * 1.5;
-                ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(0, -len); ctx.stroke();
+                ctx.lineCap = 'round';
+
+                ctx.beginPath();
+                ctx.moveTo(0,0);
+                ctx.lineTo(0, -len);
+                ctx.stroke();
+
                 ctx.translate(0, -len);
-                this.renderRecursive(ctx, len * 0.75, 0.4, depth - 1);
-                this.renderRecursive(ctx, len * 0.75, -0.4, depth - 1);
+
+                // Recursión Fractal Asimétrica
+                const nextLen = len * 0.75;
+                this.branch(ctx, ltx, nextLen, this.dna.angle, depth - 1);
+                this.branch(ctx, ltx, nextLen, -this.dna.angle, depth - 1);
+
                 ctx.restore();
             }
-        }
 
-        // --- EL OBSERVADOR (IA HUMANOIDE) ---
-        class Observer {
-            constructor() {
-                this.x = -50; this.y = State.horizon;
-                this.speed = 0.6; this.trip = 0;
-                this.color = "white";
-            }
-            update() {
-                // Lógica de consumo
-                State.plants.forEach(p => {
-                    if(!p.consumed && p.growth > 0.8 && Math.abs(this.x - p.x) < 20) {
-                        p.consumed = true;
-                        this.trip = 500;
-                        State.tripLevel = 1; // Dispara efecto visual global
-                    }
-                });
+            drawFlower(ctx, ltx) {
+                const color = `hsl(${this.dna.hue}, 80%, 60%)`;
+                ctx.fillStyle = color;
+                ctx.beginPath();
+                ctx.arc(0, 0, 4, 0, Math.PI*2);
+                ctx.fill();
 
-                this.x += this.speed * (this.trip > 0 ? 2 : 1);
-                if(this.trip > 0) this.trip--;
-                else State.tripLevel *= 0.95;
-
-                return this.x < window.innerWidth + 100;
-            }
-            draw(ctx) {
-                ctx.fillStyle = this.trip > 0 ? State.colors.hall : "white";
-                ctx.fillRect(this.x - 3, this.y - 35, 6, 25);
-                ctx.beginPath(); ctx.arc(this.x, this.y - 40, 5, 0, Math.PI*2); ctx.fill();
-            }
-        }
-
-        // --- ENGINE CORE ---
-
-        function startGame(char) {
-            State.char = char;
-            document.getElementById('selectionOverlay').style.display = 'none';
-            init();
-        }
-
-        function init() {
-            resize();
-            window.onresize = resize;
-            Canvases.game.addEventListener('mousedown', handleInput);
-            requestAnimationFrame(loop);
-            
-            // Ciclos
-            setInterval(() => { if(State.entities.length < 1) State.entities.push(new Observer()); }, 20000);
-            setInterval(saveGame, 10000); // Autoguardado mantenido
-            loadGame();
-        }
-
-        function resize() {
-            State.horizon = window.innerHeight * 0.55;
-            Object.values(Canvases).forEach(c => {
-                c.width = window.innerWidth;
-                c.height = window.innerHeight;
-            });
-        }
-
-        function loop() {
-            const ctxG = Canvases.game.getContext('2d');
-            const ctxS = Canvases.sky.getContext('2d');
-
-            // Efecto Psicoactivo Global (Filtros)
-            if(State.tripLevel > 0.1) {
-                document.body.style.filter = `hue-rotate(${Date.now()*0.1}deg) saturate(1.5)`;
-            } else {
-                document.body.style.filter = 'none';
-            }
-
-            // Fondo y Horizonte
-            ctxS.fillStyle = '#0a1b0a';
-            ctxS.fillRect(0,0, window.innerWidth, window.innerHeight);
-            ctxG.clearRect(0,0, window.innerWidth, window.innerHeight);
-            ctxG.fillStyle = '#050a05';
-            ctxG.fillRect(0, State.horizon, window.innerWidth, window.innerHeight);
-
-            // Plantas
-            State.plants.forEach(p => { p.update(); p.draw(ctxG); });
-
-            // Entidades
-            State.entities = State.entities.filter(e => {
-                const alive = e.update();
-                e.draw(ctxG);
-                return alive;
-            });
-
-            // UI
-            document.getElementById('stat-bio').innerText = Math.floor(State.bio);
-            document.getElementById('stat-flux').innerText = State.tripLevel > 0.1 ? 'ALTERADA' : 'LÚCIDA';
-
-            requestAnimationFrame(loop);
-        }
-
-        // --- INTERACCION Y MINIJUEGOS ---
-
-        function handleInput(e) {
-            const x = e.clientX; const y = e.clientY;
-            if(State.tool === 'seed' && y > State.horizon - 50) {
-                if(State.bio >= 50) {
-                    State.bio -= 50;
-                    State.plants.push(new Plant(x, State.horizon));
+                // SISTEMA DE ILUMINACIÓN (BLOOM)
+                if(this.isHigh) {
+                    ltx.save();
+                    const pos = ctx.getTransform();
+                    ltx.translate(pos.e, pos.f);
+                    const grad = ltx.createRadialGradient(0,0,0,0,0,20);
+                    grad.addColorStop(0, color);
+                    grad.addColorStop(1, 'transparent');
+                    ltx.fillStyle = grad;
+                    ltx.beginPath(); ltx.arc(0,0,20,0,Math.PI*2); ltx.fill();
+                    ltx.restore();
                 }
             }
         }
 
-        function setTool(t) {
-            State.tool = t;
-            document.querySelectorAll('.tool').forEach(b => b.classList.remove('active'));
-            document.getElementById(`btn-${t}`).classList.add('active');
+        // --- CLASE OBSERVER (IA HUMANOIDE) ---
+        class Observer {
+            constructor() {
+                this.x = -50; this.y = Engine.state.horizon;
+                this.speed = 0.7;
+                this.isTripping = false;
+            }
+            update(plants) {
+                this.x += this.speed * (this.isTripping ? 0.3 : 1);
+                
+                // Consumo
+                plants.forEach(p => {
+                    if(p.growth > 0.9 && Math.abs(this.x - p.x) < 20 && !this.isTripping) {
+                        this.isTripping = true;
+                        Engine.state.trip = 1;
+                        setTimeout(() => { this.isTripping = false; }, 8000);
+                    }
+                });
+                return this.x < window.innerWidth + 100;
+            }
+            draw(ctx) {
+                ctx.fillStyle = this.isTripping ? "#a855f7" : "white";
+                if(this.isTripping) ctx.shadowBlur = 15, ctx.shadowColor = "purple";
+                ctx.fillRect(this.x - 3, this.y - 35, 6, 25);
+                ctx.beginPath(); ctx.arc(this.x, this.y - 40, 5, 0, Math.PI*2); ctx.fill();
+                ctx.shadowBlur = 0;
+            }
         }
 
-        function openModal(type) {
-            const modal = document.getElementById('modal');
-            const inner = document.getElementById('modal-inner');
-            modal.style.display = 'flex';
+        // --- UI FUNCTIONS ---
+        function setTool(t) {
+            Engine.state.tool = t;
+            document.querySelectorAll('.btn-action').forEach(b => b.classList.remove('active'));
+            document.getElementById(`tool-${t}`).classList.add('active');
+        }
 
-            if(type === 'shop') {
-                inner.innerHTML = `
-                    <h2>Mercado Negro de Semillas</h2>
-                    <p>Biomasa disponible: ${Math.floor(State.bio)}</p>
-                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:20px;">
-                        <button class="tool" onclick="buy('fast')">Semilla Sativa (Velocidad)</button>
-                        <button class="tool" onclick="buy('big')">Semilla Índica (Tamaño)</button>
-                    </div>
-                `;
-            } else if(type.startsWith('game')) {
-                inner.innerHTML = `<h2>Minijuego: ${type.toUpperCase()}</h2>
-                <p>Generando pulsos neuronales...</p>
-                <div style="font-size:40px; margin:20px; cursor:pointer;" onclick="State.bio+=10">🧬</div>`;
+        function uiAction(type) {
+            const m = document.getElementById('modal');
+            const c = document.getElementById('modal-content');
+            m.style.display = 'flex';
+            if(type === 'market') {
+                c.innerHTML = `<h2>Bio-Exchange</h2><p>Synthesize lifeforms for energy.</p>
+                <button class="btn-action" style="margin-top:20px" onclick="Engine.state.bio+=500; closeModal()">+500 Bio Reserve</button>`;
+            } else {
+                c.innerHTML = `<h2>Nexus Node</h2><p>Stabilizing neural connections...</p>`;
             }
         }
 
         function closeModal() { document.getElementById('modal').style.display = 'none'; }
 
-        function buy(t) {
-            if(State.bio >= 100) { State.bio -= 100; State.plants.push(new Plant(Math.random()*window.innerWidth, State.horizon)); }
-        }
-
-        // --- GUARDADO (Recuperado de tu web) ---
-        function saveGame() {
-            localStorage.setItem('psychogarden_save', JSON.stringify({ bio: State.bio }));
-        }
-        function loadGame() {
-            const saved = localStorage.getItem('psychogarden_save');
-            if(saved) { const data = JSON.parse(saved); State.bio = data.bio; }
-        }
+        // Start
+        Engine.init();
 
     </script>
 </body>
