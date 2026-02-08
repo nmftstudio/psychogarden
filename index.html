@@ -2,1535 +2,344 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PSYCHOGARDEN - Psychedelic Ecosystem Simulator</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>🌿 Psychogarden | Professional Neural Edition</title>
+    <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Work+Sans:wght@300;400;600&display=swap" rel="stylesheet">
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap');
-
         :root {
-            --primary: #ff00ff;
-            --primary-dark: #cc00cc;
-            --primary-light: #ff66ff;
-            --secondary: #00ffff;
-            --accent: #ffff00;
-            --danger: #ff0066;
-            --bg-dark: #0a0014;
-            --bg-panel: rgba(10, 0, 20, 0.95);
-            --border: rgba(255, 0, 255, 0.3);
-            --text: #f8fafc;
-            --text-dim: #c084fc;
+            --primary: #2d5016;
+            --primary-light: #4a7c2e;
+            --accent: #f4a261;
+            --bg-dark: #0d1b0a;
+            --text: #f8f4e8;
+            --glass: rgba(13, 27, 10, 0.9);
+            --gold: #d4af37;
         }
 
-        body {
-            font-family: 'Inter', sans-serif;
-            background: var(--bg-dark);
-            color: var(--text);
-            overflow: hidden;
-            user-select: none;
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            background: var(--bg-dark); 
+            color: var(--text); 
+            font-family: 'Work Sans', sans-serif; 
+            overflow: hidden; 
+            transition: filter 1s ease;
         }
 
-        #gameCanvas {
-            position: absolute;
-            top: 0;
-            left: 0;
-            cursor: grab;
+        canvas { position: absolute; top: 0; left: 0; }
+        #skyCanvas { z-index: 0; }
+        #gameCanvas { z-index: 1; }
+        #fxCanvas { z-index: 5; pointer-events: none; }
+
+        /* --- CHARACTER SELECTION (Recuperado) --- */
+        #selectionOverlay {
+            position: fixed; inset: 0; background: var(--bg-dark);
+            z-index: 2000; display: flex; flex-direction: column; align-items: center; justify-content: center;
         }
-
-        #gameCanvas:active {
-            cursor: grabbing;
+        .char-grid { display: flex; gap: 30px; margin-top: 40px; }
+        .char-card {
+            background: var(--glass); border: 1px solid rgba(255,255,255,0.1);
+            padding: 30px; cursor: pointer; transition: 0.3s; text-align: center;
         }
+        .char-card:hover { border-color: var(--accent); transform: translateY(-10px); }
 
-        /* HUD */
-        #hud {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            z-index: 100;
+        /* --- UI OVERLAY --- */
+        #uiLayer { position: absolute; z-index: 100; width: 100%; height: 100%; pointer-events: none; }
+
+        .top-hud {
+            position: absolute; top: 30px; width: 100%;
+            display: flex; justify-content: space-around; pointer-events: auto;
         }
-
-        .hud-panel {
-            background: var(--bg-panel);
-            backdrop-filter: blur(12px);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 16px;
-            pointer-events: auto;
-            box-shadow: 0 8px 32px rgba(255, 0, 255, 0.3);
-        }
-
-        /* Top Bar */
-        #topBar {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            right: 20px;
-            display: flex;
-            justify-content: space-between;
-            gap: 16px;
-        }
-
-        #resources {
-            display: flex;
-            gap: 24px;
-            align-items: center;
-        }
-
-        .resource {
-            display: flex;
-            flex-direction: column;
-            min-width: 80px;
-        }
-
-        .resource-label {
-            font-size: 11px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            color: var(--text-dim);
-            margin-bottom: 4px;
-        }
-
-        .resource-value {
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 20px;
-            font-weight: 600;
-        }
-
-        .resource-value.trips { color: var(--primary); text-shadow: 0 0 10px var(--primary); }
-        .resource-value.consciousness { color: var(--secondary); text-shadow: 0 0 10px var(--secondary); }
-        .resource-value.energy { color: var(--accent); text-shadow: 0 0 10px var(--accent); }
-
-        /* Sidebar */
-        #sidebar {
-            position: fixed;
-            left: 20px;
-            top: 50%;
-            transform: translateY(-50%);
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            z-index: 200;
-        }
-
-        .sidebar-icon {
-            width: 56px;
-            height: 56px;
-            background: var(--bg-panel);
-            backdrop-filter: blur(12px);
-            border: 2px solid var(--border);
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 24px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            pointer-events: auto;
-            position: relative;
-        }
-
-        .sidebar-icon:hover {
-            background: var(--primary);
-            border-color: var(--primary);
-            transform: scale(1.1);
-            box-shadow: 0 4px 20px rgba(255, 0, 255, 0.6);
-        }
-
-        .sidebar-icon.active {
-            background: var(--primary);
-            border-color: var(--primary);
-        }
-
-        .sidebar-icon::before {
-            content: attr(data-label);
-            position: absolute;
-            left: 70px;
-            background: rgba(0, 0, 0, 0.95);
-            color: white;
-            padding: 8px 12px;
-            border-radius: 6px;
-            font-size: 12px;
-            white-space: nowrap;
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.2s;
-            border: 1px solid var(--primary);
-        }
-
-        .sidebar-icon:hover::before {
-            opacity: 1;
-        }
-
-        /* Dropdown Panel */
-        .dropdown-panel {
-            position: fixed;
-            left: 96px;
-            top: 50%;
-            transform: translateY(-50%);
-            width: 360px;
-            max-height: 75vh;
-            overflow-y: auto;
-            background: var(--bg-panel);
-            backdrop-filter: blur(12px);
-            border: 2px solid var(--primary);
-            border-radius: 16px;
-            padding: 20px;
-            pointer-events: auto;
-            box-shadow: 0 8px 40px rgba(255, 0, 255, 0.5);
-            display: none;
-            animation: slideIn 0.3s ease;
-        }
-
-        @keyframes slideIn {
-            from {
-                opacity: 0;
-                transform: translateY(-50%) translateX(-20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(-50%) translateX(0);
-            }
-        }
-
-        .dropdown-panel.active {
-            display: block;
-        }
-
-        .panel-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-            padding-bottom: 12px;
-            border-bottom: 1px solid var(--border);
-        }
-
-        .panel-title {
-            font-size: 18px;
-            font-weight: 700;
-            color: var(--primary);
-            text-shadow: 0 0 10px var(--primary);
-        }
-
-        .close-panel {
-            width: 32px;
-            height: 32px;
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            font-size: 20px;
-            transition: all 0.2s;
-        }
-
-        .close-panel:hover {
-            background: var(--danger);
-            border-color: var(--danger);
-        }
-
-        .panel-section {
-            margin-bottom: 20px;
-        }
-
-        .section-title {
-            font-size: 13px;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            margin-bottom: 12px;
-            color: var(--text-dim);
-        }
-
-        /* Plant Cards */
-        .plant-grid {
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: 10px;
-        }
-
-        .plant-card {
-            background: rgba(255, 0, 255, 0.05);
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            padding: 12px;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-
-        .plant-card:hover {
-            background: rgba(255, 0, 255, 0.15);
-            border-color: var(--primary);
-            transform: translateX(5px);
-            box-shadow: 0 0 20px rgba(255, 0, 255, 0.4);
-        }
-
-        .plant-card-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 8px;
-        }
-
-        .plant-name {
-            font-size: 14px;
-            font-weight: 600;
-            color: var(--primary);
-        }
-
-        .plant-cost {
-            font-size: 12px;
-            font-family: 'JetBrains Mono', monospace;
-            color: var(--accent);
-        }
-
-        .plant-effect {
-            font-size: 11px;
-            color: var(--text-dim);
-            line-height: 1.5;
-            margin-top: 4px;
-        }
-
-        .effect-tag {
-            display: inline-block;
-            padding: 2px 8px;
-            border-radius: 4px;
-            font-size: 10px;
-            margin-right: 4px;
-            margin-top: 4px;
-        }
-
-        .effect-tag.hallucinogenic { background: rgba(255, 0, 255, 0.3); }
-        .effect-tag.euphoric { background: rgba(0, 255, 255, 0.3); }
-        .effect-tag.energizing { background: rgba(255, 255, 0, 0.3); }
-        .effect-tag.sedative { background: rgba(100, 100, 255, 0.3); }
-        .effect-tag.toxic { background: rgba(255, 0, 0, 0.3); }
-
-        .btn {
-            width: 100%;
-            padding: 12px 16px;
-            background: linear-gradient(135deg, var(--primary-dark), var(--primary));
-            border: none;
-            border-radius: 8px;
-            color: white;
-            font-size: 14px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            margin-bottom: 8px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 20px rgba(255, 0, 255, 0.6);
-        }
-
-        .btn:disabled {
-            opacity: 0.4;
-            cursor: not-allowed;
-            transform: none;
-        }
-
-        /* Minimap */
-        #minimap {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            width: 200px;
-            height: 150px;
-            background: var(--bg-panel);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            overflow: hidden;
-            pointer-events: auto;
-        }
-
-        #minimapCanvas {
-            width: 100%;
-            height: 100%;
-        }
-
-        /* Bottom Bar */
-        #bottomBar {
-            position: absolute;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            display: flex;
-            gap: 16px;
-        }
-
-        .info-pill {
-            background: var(--bg-panel);
-            backdrop-filter: blur(12px);
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            padding: 10px 16px;
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 12px;
-            color: var(--text-dim);
-            pointer-events: auto;
-        }
-
-        .info-label {
-            color: var(--primary);
-            margin-right: 8px;
-        }
-
-        /* Notifications */
-        #notifications {
-            position: absolute;
-            top: 100px;
-            right: 20px;
-            width: 320px;
-            pointer-events: none;
-        }
-
-        .notification {
-            background: var(--bg-panel);
-            border: 1px solid var(--border);
-            border-left: 4px solid var(--primary);
-            border-radius: 8px;
-            padding: 12px;
-            margin-bottom: 8px;
-            animation: slideInRight 0.3s ease;
-            font-size: 13px;
-            pointer-events: auto;
-        }
-
-        @keyframes slideInRight {
-            from {
-                opacity: 0;
-                transform: translateX(100px);
-            }
-            to {
-                opacity: 1;
-                transform: translateX(0);
-            }
-        }
-
-        .notification-title {
-            font-weight: 600;
-            margin-bottom: 4px;
-        }
-
-        .notification-body {
-            color: var(--text-dim);
-            font-size: 12px;
-        }
-
-        /* Stats Grid */
-        .stats-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 12px;
-            margin-top: 12px;
-        }
-
         .stat-card {
-            background: rgba(255, 0, 255, 0.05);
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            padding: 12px;
+            background: var(--glass); padding: 12px 25px; border-radius: 4px;
+            border: 1px solid rgba(255,255,255,0.1); backdrop-filter: blur(10px);
         }
+        .stat-card label { display: block; font-size: 10px; text-transform: uppercase; color: var(--accent); }
+        .stat-card span { font-family: 'Libre Baskerville', serif; font-size: 22px; font-weight: 700; }
 
-        .stat-card-label {
-            font-size: 11px;
-            color: var(--text-dim);
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            margin-bottom: 4px;
+        /* --- MENU NEXUS (DERECHA) --- */
+        .nexus-menu {
+            position: absolute; right: 30px; top: 50%; transform: translateY(-50%);
+            display: flex; flex-direction: column; gap: 15px; pointer-events: auto;
         }
+        .nexus-btn {
+            width: 55px; height: 55px; background: var(--glass); border: 1px solid var(--accent);
+            color: var(--accent); font-size: 20px; border-radius: 50%; cursor: pointer;
+            transition: 0.3s; display: flex; align-items: center; justify-content: center;
+        }
+        .nexus-btn:hover { background: var(--accent); color: var(--bg-dark); }
 
-        .stat-card-value {
-            font-size: 20px;
-            font-weight: 700;
-            font-family: 'JetBrains Mono', monospace;
-            color: var(--primary);
+        /* --- TOOLBAR (ABAJO) --- */
+        .toolbar {
+            position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%);
+            display: flex; gap: 15px; pointer-events: auto;
         }
+        .tool {
+            padding: 12px 25px; background: var(--glass); border: 1px solid rgba(255,255,255,0.1);
+            color: #fff; cursor: pointer; border-radius: 30px; transition: 0.3s;
+        }
+        .tool.active { background: var(--primary-light); border-color: var(--accent); }
 
-        /* Loading */
-        #loading {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: var(--bg-dark);
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            z-index: 1000;
-            transition: opacity 0.5s;
+        /* --- MODALES --- */
+        .modal {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.95);
+            display: none; align-items: center; justify-content: center; z-index: 1500;
         }
+        .modal-content {
+            width: 90%; max-width: 600px; background: var(--bg-dark);
+            padding: 50px; border: 1px solid var(--primary-light); text-align: center;
+        }
+        .back-btn { margin-top: 30px; padding: 10px 30px; background: var(--accent); border: none; cursor: pointer; }
 
-        #loading.hidden {
-            opacity: 0;
-            pointer-events: none;
-        }
-
-        .loading-text {
-            font-size: 36px;
-            font-weight: 700;
-            background: linear-gradient(90deg, var(--primary), var(--secondary), var(--accent));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            margin-bottom: 20px;
-            letter-spacing: 4px;
-            animation: pulse 2s infinite;
-        }
-
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
-        }
-
-        .loading-bar {
-            width: 300px;
-            height: 4px;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 2px;
-            overflow: hidden;
-        }
-
-        .loading-progress {
-            height: 100%;
-            background: linear-gradient(90deg, var(--primary), var(--secondary));
-            width: 0%;
-            transition: width 0.3s;
-        }
-
-        /* Scrollbar */
-        ::-webkit-scrollbar {
-            width: 6px;
-        }
-
-        ::-webkit-scrollbar-track {
-            background: rgba(255, 255, 255, 0.05);
-        }
-
-        ::-webkit-scrollbar-thumb {
-            background: var(--primary);
-            border-radius: 3px;
-        }
-
-        /* Humanoid Status */
-        .humanoid-list {
-            max-height: 300px;
-            overflow-y: auto;
-        }
-
-        .humanoid-item {
-            background: rgba(255, 0, 255, 0.05);
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            padding: 10px;
-            margin-bottom: 8px;
-        }
-
-        .humanoid-header {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 6px;
-        }
-
-        .humanoid-name {
-            font-weight: 600;
-            font-size: 13px;
-        }
-
-        .humanoid-state {
-            font-size: 11px;
-            padding: 2px 8px;
-            border-radius: 4px;
-            background: rgba(255, 0, 255, 0.2);
-        }
-
-        .humanoid-effects {
-            font-size: 11px;
-            color: var(--text-dim);
-            line-height: 1.4;
-        }
     </style>
 </head>
 <body>
-    <div id="loading">
-        <div class="loading-text">PSYCHOGARDEN</div>
-        <div class="loading-bar">
-            <div class="loading-progress" id="loadingProgress"></div>
+
+    <canvas id="skyCanvas"></canvas>
+    <canvas id="gameCanvas"></canvas>
+    <canvas id="fxCanvas"></canvas>
+
+    <div id="selectionOverlay">
+        <h1 style="font-family: 'Libre Baskerville', serif; font-size: 40px;">Psychogarden</h1>
+        <p>Selecciona tu linaje genético</p>
+        <div class="char-grid">
+            <div class="char-card" onclick="startGame('Alquimista')">
+                <h3>🧪 Alquimista</h3>
+                <p>+20% Biomasa por planta</p>
+            </div>
+            <div class="char-card" onclick="startGame('Chamán')">
+                <h3>👁️ Chamán</h3>
+                <p>Plantas Psicoactivas puras</p>
+            </div>
         </div>
     </div>
 
-    <canvas id="gameCanvas"></canvas>
-
-    <div id="hud">
-        <div id="topBar">
-            <div class="hud-panel" id="resources">
-                <div class="resource">
-                    <div class="resource-label">Trips</div>
-                    <div class="resource-value trips" id="tripValue">0</div>
-                </div>
-                <div class="resource">
-                    <div class="resource-label">Consciousness</div>
-                    <div class="resource-value consciousness" id="consValue">0</div>
-                </div>
-                <div class="resource">
-                    <div class="resource-label">Energy</div>
-                    <div class="resource-value energy" id="energyValue">0</div>
-                </div>
-            </div>
-
-            <div id="minimap" class="hud-panel">
-                <canvas id="minimapCanvas"></canvas>
-            </div>
+    <div id="uiLayer">
+        <div class="top-hud">
+            <div class="stat-card"><label>Biomasa</label><span id="stat-bio">500</span></div>
+            <div class="stat-card"><label>Percepción</label><span id="stat-flux">Lúcida</span></div>
+            <div class="stat-card"><label>Clima</label><span id="stat-weather">Calmo</span></div>
         </div>
 
-        <div id="sidebar">
-            <div class="sidebar-icon" data-panel="plants" data-label="Psychedelic Plants">🍄</div>
-            <div class="sidebar-icon" data-panel="humanoids" data-label="Humanoids">👤</div>
-            <div class="sidebar-icon" data-panel="effects" data-label="Active Effects">✨</div>
-            <div class="sidebar-icon" data-panel="stats" data-label="Statistics">📊</div>
-            <div class="sidebar-icon" data-panel="settings" data-label="Settings">⚙️</div>
+        <div class="nexus-menu">
+            <button class="nexus-btn" onclick="openModal('shop')">🛒</button>
+            <button class="nexus-btn" onclick="openModal('game1')">🧬</button>
+            <button class="nexus-btn" onclick="openModal('game2')">🐝</button>
+            <button class="nexus-btn" onclick="openModal('game3')">☀️</button>
         </div>
 
-        <!-- Panels -->
-        <div class="dropdown-panel" id="panel-plants">
-            <div class="panel-header">
-                <div class="panel-title">Psychedelic Plants</div>
-                <div class="close-panel" onclick="closeAllPanels()">×</div>
-            </div>
-            <div class="panel-section">
-                <div class="section-title">Plant Species</div>
-                <div class="plant-grid" id="plantGrid"></div>
-            </div>
+        <div class="toolbar">
+            <button class="tool active" id="btn-seed" onclick="setTool('seed')">🌱 Sembrar</button>
+            <button class="tool" id="btn-harvest" onclick="setTool('harvest')">✨ Cosechar</button>
         </div>
+    </div>
 
-        <div class="dropdown-panel" id="panel-humanoids">
-            <div class="panel-header">
-                <div class="panel-title">Humanoid Population</div>
-                <div class="close-panel" onclick="closeAllPanels()">×</div>
-            </div>
-            <div class="panel-section">
-                <div class="section-title">Actions</div>
-                <button class="btn" onclick="Game.spawnHumanoid()">
-                    <span>Spawn Humanoid</span>
-                    <span>50 Trips</span>
-                </button>
-            </div>
-            <div class="panel-section">
-                <div class="section-title">Active Humanoids (<span id="humanoidCount">0</span>)</div>
-                <div class="humanoid-list" id="humanoidList"></div>
-            </div>
+    <div id="modal" class="modal">
+        <div class="modal-content">
+            <div id="modal-inner"></div>
+            <button class="back-btn" onclick="closeModal()">VOLVER AL JARDÍN</button>
         </div>
-
-        <div class="dropdown-panel" id="panel-effects">
-            <div class="panel-header">
-                <div class="panel-title">Active Effects</div>
-                <div class="close-panel" onclick="closeAllPanels()">×</div>
-            </div>
-            <div class="panel-section">
-                <div class="section-title">Global Effects</div>
-                <div id="globalEffects" style="font-size: 12px; color: var(--text-dim); line-height: 1.6;">
-                    No active global effects
-                </div>
-            </div>
-        </div>
-
-        <div class="dropdown-panel" id="panel-stats">
-            <div class="panel-header">
-                <div class="panel-title">Statistics</div>
-                <div class="close-panel" onclick="closeAllPanels()">×</div>
-            </div>
-            <div class="panel-section">
-                <div class="stats-grid">
-                    <div class="stat-card">
-                        <div class="stat-card-label">Plants</div>
-                        <div class="stat-card-value" id="plantCount">0</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-card-label">Humanoids</div>
-                        <div class="stat-card-value" id="statHumanoidCount">0</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-card-label">Trips Taken</div>
-                        <div class="stat-card-value" id="tripsCount">0</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-card-label">Consciousness</div>
-                        <div class="stat-card-value" id="consLevel">Level 1</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="dropdown-panel" id="panel-settings">
-            <div class="panel-header">
-                <div class="panel-title">Settings</div>
-                <div class="close-panel" onclick="closeAllPanels()">×</div>
-            </div>
-            <div class="panel-section">
-                <button class="btn" onclick="Game.save(); Game.notify('Saved', 'Game saved')">
-                    <span>💾 Save Game</span>
-                </button>
-                <button class="btn" onclick="if(confirm('Reset?')) { localStorage.clear(); location.reload(); }">
-                    <span>🔄 Reset</span>
-                </button>
-            </div>
-        </div>
-
-        <div id="bottomBar">
-            <div class="info-pill">
-                <span class="info-label">FPS</span>
-                <span id="fpsCounter">60</span>
-            </div>
-            <div class="info-pill">
-                <span class="info-label">VIBE</span>
-                <span id="vibeLevel">Chill</span>
-            </div>
-        </div>
-
-        <div id="notifications"></div>
     </div>
 
     <script>
-        // ═══════════════════════════════════════════════════════════
-        // UI MANAGEMENT
-        // ═══════════════════════════════════════════════════════════
+        /**
+         * PSYCHOGARDEN ENGINE: PRO NEURAL
+         */
 
-        function closeAllPanels() {
-            document.querySelectorAll('.dropdown-panel').forEach(panel => {
-                panel.classList.remove('active');
-            });
-            document.querySelectorAll('.sidebar-icon').forEach(icon => {
-                icon.classList.remove('active');
-            });
-        }
-
-        document.addEventListener('DOMContentLoaded', () => {
-            document.querySelectorAll('.sidebar-icon').forEach(icon => {
-                icon.addEventListener('click', () => {
-                    const panelId = 'panel-' + icon.dataset.panel;
-                    const panel = document.getElementById(panelId);
-                    const isActive = panel.classList.contains('active');
-                    
-                    closeAllPanels();
-                    
-                    if (!isActive) {
-                        panel.classList.add('active');
-                        icon.classList.add('active');
-                    }
-                });
-            });
-
-            window.addEventListener('keydown', (e) => {
-                if (e.key === 'Escape') {
-                    closeAllPanels();
-                }
-            });
-        });
-
-        // ═══════════════════════════════════════════════════════════
-        // PLANT LIBRARY
-        // ═══════════════════════════════════════════════════════════
-
-        const PLANT_LIBRARY = {
-            psychedelicMushroom: {
-                name: 'Psychedelic Mushroom',
-                cost: 30,
-                effect: 'hallucinogenic',
-                description: 'Intense visual hallucinations, color trails, euphoria',
-                duration: 15,
-                intensity: 0.9,
-                hue: 280,
-                tags: ['hallucinogenic', 'euphoric']
-            },
-            glowingFern: {
-                name: 'Glowing Fern',
-                cost: 40,
-                effect: 'bioluminescent',
-                description: 'Mild hallucinations, enhanced perception, glowing vision',
-                duration: 10,
-                intensity: 0.5,
-                hue: 120,
-                tags: ['hallucinogenic']
-            },
-            dreamVine: {
-                name: 'Dream Vine',
-                cost: 50,
-                effect: 'dreamy',
-                description: 'Floating sensation, time distortion, peaceful visions',
-                duration: 20,
-                intensity: 0.7,
-                hue: 200,
-                tags: ['hallucinogenic', 'sedative']
-            },
-            energyFlower: {
-                name: 'Energy Flower',
-                cost: 35,
-                effect: 'energizing',
-                description: 'Hyperactivity, speed boost, bright colors',
-                duration: 8,
-                intensity: 0.8,
-                hue: 60,
-                tags: ['energizing', 'euphoric']
-            },
-            calmingLotus: {
-                name: 'Calming Lotus',
-                cost: 45,
-                effect: 'sedative',
-                description: 'Extreme relaxation, slow motion, pastel colors',
-                duration: 12,
-                intensity: 0.6,
-                hue: 300,
-                tags: ['sedative']
-            },
-            cosmicCactus: {
-                name: 'Cosmic Cactus',
-                cost: 60,
-                effect: 'cosmic',
-                description: 'Reality distortion, fractals, interdimensional visions',
-                duration: 25,
-                intensity: 1.0,
-                hue: 180,
-                tags: ['hallucinogenic', 'euphoric']
-            },
-            toxicBerry: {
-                name: 'Toxic Berry',
-                cost: 20,
-                effect: 'toxic',
-                description: 'Nausea, confusion, dark visions',
-                duration: 5,
-                intensity: 0.4,
-                hue: 0,
-                tags: ['toxic']
-            },
-            euphoriaTree: {
-                name: 'Euphoria Tree',
-                cost: 55,
-                effect: 'euphoric',
-                description: 'Pure bliss, rainbow trails, dancing urges',
-                duration: 18,
-                intensity: 0.85,
-                hue: 330,
-                tags: ['euphoric', 'hallucinogenic']
-            }
+        const State = {
+            bio: 500, plants: [], entities: [], insects: [], 
+            tool: 'seed', horizon: 0, weather: 'sunny',
+            tripLevel: 0, char: '',
+            colors: { stim: '#4ade80', sed: '#60a5fa', hall: '#a855f7' }
         };
 
-        // ═══════════════════════════════════════════════════════════
-        // GAME ENGINE
-        // ═══════════════════════════════════════════════════════════
-
-        const Game = {
-            canvas: null,
-            ctx: null,
-            width: 0,
-            height: 0,
-            
-            worldWidth: 8000,
-            worldHeight: 2500,
-            
-            camera: {
-                x: 0,
-                y: 0,
-                targetX: 0,
-                targetY: 0,
-                shake: 0,
-                isDragging: false,
-                dragStartX: 0,
-                dragStartY: 0
-            },
-            
-            state: {
-                trips: 100,
-                consciousness: 100,
-                energy: 100,
-                plants: [],
-                humanoids: [],
-                totalTrips: 0,
-                time: 0,
-                globalIntensity: 0
-            },
-            
-            lastTime: 0,
-            fps: 0,
-            frameCount: 0,
-            lastFpsUpdate: 0,
-            
-            init() {
-                this.canvas = document.getElementById('gameCanvas');
-                this.ctx = this.canvas.getContext('2d');
-                
-                this.resize();
-                window.addEventListener('resize', () => this.resize());
-                
-                this.camera.x = this.worldWidth / 2 - this.width / 2;
-                this.camera.y = this.worldHeight - this.height - 100;
-                this.camera.targetX = this.camera.x;
-                this.camera.targetY = this.camera.y;
-                
-                this.setupControls();
-                this.generateInitialWorld();
-                this.setupPlantGrid();
-                
-                this.lastTime = performance.now();
-                requestAnimationFrame((t) => this.gameLoop(t));
-                
-                setTimeout(() => {
-                    document.getElementById('loading').classList.add('hidden');
-                    this.notify('Welcome to PSYCHOGARDEN', 'Explore consciousness through nature');
-                }, 1000);
-                
-                setInterval(() => this.save(), 30000);
-                this.load();
-                setInterval(() => this.passiveIncome(), 1000);
-            },
-            
-            resize() {
-                this.width = window.innerWidth;
-                this.height = window.innerHeight;
-                this.canvas.width = this.width;
-                this.canvas.height = this.height;
-                
-                const miniCanvas = document.getElementById('minimapCanvas');
-                miniCanvas.width = 200;
-                miniCanvas.height = 150;
-            },
-            
-            setupControls() {
-                this.canvas.addEventListener('mousedown', (e) => {
-                    this.camera.isDragging = true;
-                    this.camera.dragStartX = e.clientX + this.camera.x;
-                    this.camera.dragStartY = e.clientY + this.camera.y;
-                });
-                
-                this.canvas.addEventListener('mousemove', (e) => {
-                    if (this.camera.isDragging) {
-                        this.camera.targetX = this.camera.dragStartX - e.clientX;
-                        this.camera.targetY = this.camera.dragStartY - e.clientY;
-                        
-                        this.camera.targetX = Math.max(0, Math.min(this.worldWidth - this.width, this.camera.targetX));
-                        this.camera.targetY = Math.max(0, Math.min(this.worldHeight - this.height, this.camera.targetY));
-                    }
-                });
-                
-                this.canvas.addEventListener('mouseup', () => {
-                    this.camera.isDragging = false;
-                });
-            },
-            
-            generateInitialWorld() {
-                // Start with some plants
-                for (let i = 0; i < 20; i++) {
-                    const plantType = Object.keys(PLANT_LIBRARY)[Math.floor(Math.random() * 3)];
-                    const x = Math.random() * this.worldWidth;
-                    const y = this.worldHeight - 150 - Math.random() * 50;
-                    this.state.plants.push(new PsychedelicPlant(x, y, plantType));
-                }
-                
-                // Start with some humanoids
-                for (let i = 0; i < 5; i++) {
-                    const x = Math.random() * this.worldWidth;
-                    const y = this.worldHeight - 200 - Math.random() * 100;
-                    this.state.humanoids.push(new Humanoid(x, y));
-                }
-            },
-            
-            setupPlantGrid() {
-                const grid = document.getElementById('plantGrid');
-                Object.entries(PLANT_LIBRARY).forEach(([key, plant]) => {
-                    const card = document.createElement('div');
-                    card.className = 'plant-card';
-                    card.innerHTML = `
-                        <div class="plant-card-header">
-                            <div class="plant-name">${plant.name}</div>
-                            <div class="plant-cost">${plant.cost} trips</div>
-                        </div>
-                        <div class="plant-effect">${plant.description}</div>
-                        <div>
-                            ${plant.tags.map(tag => `<span class="effect-tag ${tag}">${tag}</span>`).join('')}
-                        </div>
-                    `;
-                    card.onclick = () => this.plantSeed(key);
-                    grid.appendChild(card);
-                });
-            },
-            
-            gameLoop(timestamp) {
-                const dt = Math.min((timestamp - this.lastTime) / 1000, 0.05);
-                this.lastTime = timestamp;
-                this.state.time += dt;
-                
-                this.update(dt);
-                this.render();
-                
-                this.frameCount++;
-                if (timestamp - this.lastFpsUpdate > 1000) {
-                    this.fps = this.frameCount;
-                    this.frameCount = 0;
-                    this.lastFpsUpdate = timestamp;
-                    document.getElementById('fpsCounter').textContent = this.fps;
-                }
-                
-                requestAnimationFrame((t) => this.gameLoop(t));
-            },
-            
-            update(dt) {
-                // Camera smooth follow with shake
-                this.camera.shake *= 0.9;
-                this.camera.x += (this.camera.targetX - this.camera.x) * 10 * dt;
-                this.camera.y += (this.camera.targetY - this.camera.y) * 10 * dt;
-                
-                // Update plants
-                this.state.plants = this.state.plants.filter(plant => {
-                    plant.update(dt);
-                    return plant.alive;
-                });
-                
-                // Update humanoids
-                this.state.humanoids = this.state.humanoids.filter(humanoid => {
-                    humanoid.update(dt, this.state.plants);
-                    return humanoid.alive;
-                });
-                
-                // Calculate global intensity from all active effects
-                let totalIntensity = 0;
-                this.state.humanoids.forEach(h => {
-                    h.activeEffects.forEach(e => {
-                        totalIntensity += e.intensity;
-                    });
-                });
-                this.state.globalIntensity = totalIntensity / Math.max(1, this.state.humanoids.length);
-                
-                // Update camera shake based on intensity
-                this.camera.shake = this.state.globalIntensity * 5;
-                
-                this.updateUI();
-            },
-            
-            render() {
-                const ctx = this.ctx;
-                
-                // Psychedelic sky based on global intensity
-                const skyHue = (this.state.time * 10 + this.state.globalIntensity * 180) % 360;
-                const gradient = ctx.createLinearGradient(0, 0, 0, this.height);
-                gradient.addColorStop(0, `hsl(${skyHue}, ${50 + this.state.globalIntensity * 50}%, 20%)`);
-                gradient.addColorStop(1, `hsl(${(skyHue + 60) % 360}, ${30 + this.state.globalIntensity * 30}%, 15%)`);
-                
-                ctx.fillStyle = gradient;
-                ctx.fillRect(0, 0, this.width, this.height);
-                
-                // Apply camera shake
-                ctx.save();
-                const shakeX = (Math.random() - 0.5) * this.camera.shake;
-                const shakeY = (Math.random() - 0.5) * this.camera.shake;
-                ctx.translate(-this.camera.x + shakeX, -this.camera.y + shakeY);
-                
-                this.drawGround();
-                
-                // Draw plants
-                this.state.plants.forEach(plant => {
-                    if (this.isVisible(plant.x, plant.y, 200)) {
-                        plant.draw(ctx, this.state.globalIntensity);
-                    }
-                });
-                
-                // Draw humanoids
-                this.state.humanoids.forEach(humanoid => {
-                    if (this.isVisible(humanoid.x, humanoid.y, 100)) {
-                        humanoid.draw(ctx);
-                    }
-                });
-                
-                ctx.restore();
-                
-                this.drawMinimap();
-            },
-            
-            drawGround() {
-                const ctx = this.ctx;
-                const groundY = this.worldHeight - 150;
-                
-                const groundHue = (this.state.time * 5 + this.state.globalIntensity * 90) % 360;
-                const gradient = ctx.createLinearGradient(0, groundY - 50, 0, this.worldHeight);
-                gradient.addColorStop(0, `hsl(${groundHue}, ${30 + this.state.globalIntensity * 40}%, 15%)`);
-                gradient.addColorStop(1, `hsl(${groundHue}, ${20 + this.state.globalIntensity * 20}%, 8%)`);
-                
-                ctx.fillStyle = gradient;
-                ctx.fillRect(0, groundY, this.worldWidth, 150);
-                
-                // Grass with color shifts
-                const startX = Math.max(0, Math.floor(this.camera.x / 10) * 10);
-                const endX = Math.min(this.worldWidth, Math.ceil((this.camera.x + this.width) / 10) * 10);
-                
-                for (let x = startX; x < endX; x += 10) {
-                    const grassHue = (groundHue + x * 0.5 + this.state.time * 20) % 360;
-                    const height = 15 + Math.sin(x * 0.05) * 5;
-                    const sway = Math.sin(this.state.time * 3 + x * 0.1) * 3;
-                    
-                    ctx.strokeStyle = `hsla(${grassHue}, ${50 + this.state.globalIntensity * 50}%, ${40 + this.state.globalIntensity * 30}%, 0.6)`;
-                    ctx.lineWidth = 2;
-                    ctx.beginPath();
-                    ctx.moveTo(x, groundY);
-                    ctx.lineTo(x + sway, groundY - height);
-                    ctx.stroke();
-                }
-            },
-            
-            drawMinimap() {
-                const miniCanvas = document.getElementById('minimapCanvas');
-                const ctx = miniCanvas.getContext('2d');
-                const w = miniCanvas.width;
-                const h = miniCanvas.height;
-                
-                ctx.fillStyle = '#0a0014';
-                ctx.fillRect(0, 0, w, h);
-                
-                const scaleX = w / this.worldWidth;
-                const scaleY = h / this.worldHeight;
-                
-                this.state.plants.forEach(plant => {
-                    ctx.fillStyle = `hsl(${plant.hue}, 100%, 50%)`;
-                    ctx.fillRect(plant.x * scaleX, plant.y * scaleY, 3, 3);
-                });
-                
-                this.state.humanoids.forEach(humanoid => {
-                    const color = humanoid.activeEffects.length > 0 ? '#ff00ff' : '#ffffff';
-                    ctx.fillStyle = color;
-                    ctx.fillRect(humanoid.x * scaleX, humanoid.y * scaleY, 4, 4);
-                });
-                
-                ctx.strokeStyle = '#ffff00';
-                ctx.lineWidth = 2;
-                ctx.strokeRect(
-                    this.camera.x * scaleX,
-                    this.camera.y * scaleY,
-                    this.width * scaleX,
-                    this.height * scaleY
-                );
-            },
-            
-            isVisible(x, y, margin = 0) {
-                return x + margin > this.camera.x && 
-                       x - margin < this.camera.x + this.width &&
-                       y + margin > this.camera.y && 
-                       y - margin < this.camera.y + this.height;
-            },
-            
-            // Actions
-            plantSeed(plantType) {
-                const plant = PLANT_LIBRARY[plantType];
-                if (this.state.trips >= plant.cost) {
-                    const x = this.camera.x + this.width / 2 + (Math.random() - 0.5) * 300;
-                    const y = this.worldHeight - 150 - Math.random() * 50;
-                    this.state.plants.push(new PsychedelicPlant(x, y, plantType));
-                    this.state.trips -= plant.cost;
-                    this.notify('Plant Added', plant.name);
-                } else {
-                    this.notify('Not Enough', `Need ${plant.cost} trips`);
-                }
-            },
-            
-            spawnHumanoid() {
-                if (this.state.trips >= 50) {
-                    const x = this.camera.x + this.width / 2 + (Math.random() - 0.5) * 400;
-                    const y = this.worldHeight - 200 - Math.random() * 100;
-                    this.state.humanoids.push(new Humanoid(x, y));
-                    this.state.trips -= 50;
-                    this.notify('Humanoid Spawned', 'New consciousness added');
-                } else {
-                    this.notify('Not Enough', 'Need 50 trips');
-                }
-            },
-            
-            passiveIncome() {
-                this.state.trips += this.state.plants.length * 0.2;
-                this.state.consciousness += this.state.humanoids.length * 0.5;
-                this.state.energy += 1;
-            },
-            
-            updateUI() {
-                document.getElementById('tripValue').textContent = Math.floor(this.state.trips);
-                document.getElementById('consValue').textContent = Math.floor(this.state.consciousness);
-                document.getElementById('energyValue').textContent = Math.floor(this.state.energy);
-                document.getElementById('plantCount').textContent = this.state.plants.length;
-                document.getElementById('humanoidCount').textContent = this.state.humanoids.length;
-                document.getElementById('statHumanoidCount').textContent = this.state.humanoids.length;
-                document.getElementById('tripsCount').textContent = this.state.totalTrips;
-                
-                const consLevel = Math.floor(this.state.consciousness / 100) + 1;
-                document.getElementById('consLevel').textContent = `Level ${consLevel}`;
-                
-                // Update vibe
-                const vibes = ['Chill', 'Elevated', 'Transcendent', 'Cosmic', 'Interdimensional'];
-                const vibeIndex = Math.min(4, Math.floor(this.state.globalIntensity * 5));
-                document.getElementById('vibeLevel').textContent = vibes[vibeIndex];
-                
-                // Update humanoid list
-                this.updateHumanoidList();
-            },
-            
-            updateHumanoidList() {
-                const list = document.getElementById('humanoidList');
-                list.innerHTML = '';
-                
-                this.state.humanoids.forEach((humanoid, i) => {
-                    const item = document.createElement('div');
-                    item.className = 'humanoid-item';
-                    
-                    const effectsText = humanoid.activeEffects.length > 0 
-                        ? humanoid.activeEffects.map(e => e.name).join(', ')
-                        : 'Sober';
-                    
-                    item.innerHTML = `
-                        <div class="humanoid-header">
-                            <div class="humanoid-name">Humanoid ${i + 1}</div>
-                            <div class="humanoid-state">${humanoid.state}</div>
-                        </div>
-                        <div class="humanoid-effects">${effectsText}</div>
-                    `;
-                    list.appendChild(item);
-                });
-            },
-            
-            notify(title, body) {
-                const container = document.getElementById('notifications');
-                const notif = document.createElement('div');
-                notif.className = 'notification';
-                notif.innerHTML = `
-                    <div class="notification-title">${title}</div>
-                    <div class="notification-body">${body}</div>
-                `;
-                container.appendChild(notif);
-                
-                setTimeout(() => {
-                    notif.style.opacity = '0';
-                    setTimeout(() => notif.remove(), 300);
-                }, 4000);
-            },
-            
-            save() {
-                const data = {
-                    trips: this.state.trips,
-                    consciousness: this.state.consciousness,
-                    energy: this.state.energy,
-                    totalTrips: this.state.totalTrips
-                };
-                localStorage.setItem('psychogarden_save', JSON.stringify(data));
-            },
-            
-            load() {
-                const saved = localStorage.getItem('psychogarden_save');
-                if (saved) {
-                    const data = JSON.parse(saved);
-                    Object.assign(this.state, data);
-                }
-            }
+        const Canvases = {
+            sky: document.getElementById('skyCanvas'),
+            game: document.getElementById('gameCanvas'),
+            fx: document.getElementById('fxCanvas')
         };
 
-        // ═══════════════════════════════════════════════════════════
-        // PSYCHEDELIC PLANT CLASS
-        // ═══════════════════════════════════════════════════════════
-
-        class PsychedelicPlant {
-            constructor(x, y, type) {
-                this.x = x;
-                this.y = y;
-                this.type = type;
-                this.data = PLANT_LIBRARY[type];
-                this.alive = true;
-                this.age = 0;
-                this.growth = 0;
-                this.targetGrowth = 1;
-                
-                this.height = 60 + Math.random() * 80;
-                this.hue = this.data.hue;
-                this.pulsePhase = Math.random() * Math.PI * 2;
-            }
-            
-            update(dt) {
-                this.age += dt;
-                this.growth += (this.targetGrowth - this.growth) * 2 * dt;
-            }
-            
-            draw(ctx, intensity) {
-                ctx.save();
-                ctx.translate(this.x, this.y);
-                
-                const pulse = Math.sin(Game.state.time * 3 + this.pulsePhase) * 0.2 + 0.8;
-                const currentHeight = this.height * this.growth * pulse;
-                
-                // Glow effect
-                const glowSize = 20 + intensity * 40;
-                const glow = ctx.createRadialGradient(0, -currentHeight / 2, 0, 0, -currentHeight / 2, glowSize);
-                glow.addColorStop(0, `hsla(${this.hue}, 100%, 50%, ${0.3 + intensity * 0.5})`);
-                glow.addColorStop(1, 'transparent');
-                ctx.fillStyle = glow;
-                ctx.fillRect(-glowSize, -currentHeight / 2 - glowSize, glowSize * 2, glowSize * 2);
-                
-                // Stem with rainbow shift
-                const hueShift = (this.hue + Game.state.time * 20 * intensity) % 360;
-                const gradient = ctx.createLinearGradient(0, 0, 0, -currentHeight);
-                gradient.addColorStop(0, `hsl(${hueShift}, 80%, 30%)`);
-                gradient.addColorStop(0.5, `hsl(${(hueShift + 30) % 360}, 90%, 50%)`);
-                gradient.addColorStop(1, `hsl(${(hueShift + 60) % 360}, 100%, 60%)`);
-                
-                ctx.strokeStyle = gradient;
-                ctx.lineWidth = 4 + intensity * 4;
-                ctx.lineCap = 'round';
-                
-                ctx.beginPath();
-                ctx.moveTo(0, 0);
-                ctx.lineTo(0, -currentHeight);
-                ctx.stroke();
-                
-                // Top bulb/cap
-                const capSize = 15 + intensity * 10;
-                ctx.fillStyle = `hsl(${hueShift}, 100%, ${50 + intensity * 20}%)`;
-                ctx.beginPath();
-                ctx.arc(0, -currentHeight, capSize, 0, Math.PI * 2);
-                ctx.fill();
-                
-                // Particles
-                if (Math.random() < 0.1 * intensity) {
-                    ctx.fillStyle = `hsla(${Math.random() * 360}, 100%, 70%, 0.8)`;
-                    const px = (Math.random() - 0.5) * 30;
-                    const py = -currentHeight + (Math.random() - 0.5) * 30;
-                    ctx.beginPath();
-                    ctx.arc(px, py, 2, 0, Math.PI * 2);
-                    ctx.fill();
-                }
-                
-                ctx.restore();
-            }
-        }
-
-        // ═══════════════════════════════════════════════════════════
-        // HUMANOID CLASS
-        // ═══════════════════════════════════════════════════════════
-
-        class Humanoid {
+        // --- CLASE PLANTA (Crecimiento Fractal Profesional) ---
+        class Plant {
             constructor(x, y) {
-                this.x = x;
-                this.y = y;
-                this.vx = 0;
-                this.vy = 0;
-                this.alive = true;
+                this.x = x; this.y = y;
+                this.growth = 0;
                 this.age = 0;
-                
-                this.size = 20;
-                this.hue = 30;
-                this.speed = 80;
-                
-                this.targetX = x;
-                this.targetY = y;
-                this.state = 'wandering';
-                this.stateTimer = 0;
-                
-                this.activeEffects = [];
-                this.totalIntensity = 0;
-                
-                this.pickNewTarget();
+                this.type = ['stim', 'sedative', 'trippy'][Math.floor(Math.random()*3)];
+                this.hue = this.type === 'stim' ? 120 : (this.type === 'sedative' ? 210 : 280);
+                this.consumed = false;
             }
-            
-            pickNewTarget() {
-                this.targetX = this.x + (Math.random() - 0.5) * 600;
-                this.targetY = this.y + (Math.random() - 0.5) * 200;
-                
-                this.targetX = Math.max(100, Math.min(Game.worldWidth - 100, this.targetX));
-                this.targetY = Math.max(100, Math.min(Game.worldHeight - 200, this.targetY));
+            update() {
+                if(!this.consumed && this.growth < 1) this.growth += 0.002;
+                this.age += 0.01;
             }
-            
-            update(dt, plants) {
-                this.age += dt;
-                this.stateTimer += dt;
-                
-                // Update effects
-                this.activeEffects = this.activeEffects.filter(effect => {
-                    effect.remaining -= dt;
-                    return effect.remaining > 0;
-                });
-                
-                // Calculate total intensity
-                this.totalIntensity = 0;
-                this.activeEffects.forEach(e => {
-                    this.totalIntensity += e.intensity;
-                });
-                
-                // Behavior based on effects
-                if (this.totalIntensity > 0.5) {
-                    this.state = 'tripping';
-                } else if (this.totalIntensity > 0) {
-                    this.state = 'elevated';
-                } else {
-                    this.state = 'wandering';
-                }
-                
-                // Look for plants to consume
-                let closestPlant = null;
-                let closestDist = 100;
-                
-                plants.forEach(plant => {
-                    const dist = Math.hypot(plant.x - this.x, plant.y - this.y);
-                    if (dist < closestDist && Math.random() < 0.1) {
-                        closestPlant = plant;
-                        closestDist = dist;
-                    }
-                });
-                
-                if (closestPlant && closestDist < 50) {
-                    this.consumePlant(closestPlant);
-                }
-                
-                // Movement
-                const speedMod = this.activeEffects.some(e => e.type === 'energizing') ? 2 : 
-                                 this.activeEffects.some(e => e.type === 'sedative') ? 0.3 : 1;
-                
-                if (this.state !== 'tripping' || Math.random() < 0.3) {
-                    if (this.stateTimer > 3) {
-                        this.pickNewTarget();
-                        this.stateTimer = 0;
-                    }
-                    
-                    const dx = this.targetX - this.x;
-                    const dy = this.targetY - this.y;
-                    const dist = Math.sqrt(dx * dx + dy * dy);
-                    
-                    if (dist > 20) {
-                        const accel = this.speed * speedMod * 3;
-                        this.vx += (dx / dist * accel - this.vx * 5) * dt;
-                        this.vy += (dy / dist * accel - this.vy * 5) * dt;
-                    }
-                } else {
-                    // Random movement when heavily tripping
-                    this.vx += (Math.random() - 0.5) * 200 * dt;
-                    this.vy += (Math.random() - 0.5) * 200 * dt;
-                }
-                
-                this.x += this.vx * dt;
-                this.y += this.vy * dt;
-                
-                this.x = Math.max(50, Math.min(Game.worldWidth - 50, this.x));
-                this.y = Math.max(50, Math.min(Game.worldHeight - 200, this.y));
-            }
-            
-            consumePlant(plant) {
-                const effect = {
-                    name: plant.data.name,
-                    type: plant.data.effect,
-                    intensity: plant.data.intensity,
-                    remaining: plant.data.duration
-                };
-                
-                this.activeEffects.push(effect);
-                Game.state.totalTrips++;
-                
-                Game.notify('Trip Started!', `${plant.data.name} consumed`);
-            }
-            
             draw(ctx) {
+                if(this.consumed) return;
                 ctx.save();
                 ctx.translate(this.x, this.y);
-                
-                // Body distortion based on effects
-                const distortion = this.totalIntensity * Math.sin(Game.state.time * 5);
-                
-                // Aura if tripping
-                if (this.totalIntensity > 0) {
-                    const auraSize = 40 + this.totalIntensity * 60;
-                    const auraHue = (Game.state.time * 100 * this.totalIntensity) % 360;
-                    const aura = ctx.createRadialGradient(0, 0, 0, 0, 0, auraSize);
-                    aura.addColorStop(0, `hsla(${auraHue}, 100%, 50%, ${this.totalIntensity * 0.5})`);
-                    aura.addColorStop(1, 'transparent');
-                    ctx.fillStyle = aura;
-                    ctx.fillRect(-auraSize, -auraSize, auraSize * 2, auraSize * 2);
-                }
-                
-                // Head
-                const headHue = this.totalIntensity > 0 ? (Game.state.time * 50 * this.totalIntensity) % 360 : this.hue;
-                ctx.fillStyle = `hsl(${headHue}, ${60 + this.totalIntensity * 40}%, 60%)`;
-                ctx.beginPath();
-                ctx.arc(distortion * 2, -this.size * 1.5, this.size * 0.4, 0, Math.PI * 2);
-                ctx.fill();
-                
-                // Eyes
-                const eyeSize = 3 + this.totalIntensity * 3;
-                ctx.fillStyle = this.totalIntensity > 0.5 ? '#ff00ff' : '#000';
-                ctx.beginPath();
-                ctx.arc(-5 + distortion, -this.size * 1.5, eyeSize, 0, Math.PI * 2);
-                ctx.arc(5 + distortion, -this.size * 1.5, eyeSize, 0, Math.PI * 2);
-                ctx.fill();
-                
-                // Body
-                ctx.fillStyle = `hsl(${headHue + 30}, ${50 + this.totalIntensity * 40}%, 50%)`;
-                ctx.fillRect(-this.size * 0.3 + distortion, -this.size * 1.1, this.size * 0.6, this.size * 0.8);
-                
-                // Arms
-                ctx.strokeStyle = ctx.fillStyle;
-                ctx.lineWidth = 4;
-                ctx.lineCap = 'round';
-                
-                const armWave = Math.sin(Game.state.time * 5 + this.age) * this.totalIntensity * 0.5;
-                
-                ctx.beginPath();
-                ctx.moveTo(-this.size * 0.3, -this.size * 0.8);
-                ctx.lineTo(-this.size * 0.6 + distortion * 2, -this.size * 0.4 + armWave * 20);
-                ctx.stroke();
-                
-                ctx.beginPath();
-                ctx.moveTo(this.size * 0.3, -this.size * 0.8);
-                ctx.lineTo(this.size * 0.6 + distortion * 2, -this.size * 0.4 - armWave * 20);
-                ctx.stroke();
-                
-                // Legs
-                ctx.beginPath();
-                ctx.moveTo(-this.size * 0.2, -this.size * 0.3);
-                ctx.lineTo(-this.size * 0.2 + distortion, 0);
-                ctx.stroke();
-                
-                ctx.beginPath();
-                ctx.moveTo(this.size * 0.2, -this.size * 0.3);
-                ctx.lineTo(this.size * 0.2 + distortion, 0);
-                ctx.stroke();
-                
-                // Trail particles
-                if (this.totalIntensity > 0.3 && Math.random() < 0.5) {
-                    ctx.fillStyle = `hsla(${Math.random() * 360}, 100%, 70%, 0.6)`;
-                    ctx.beginPath();
-                    ctx.arc((Math.random() - 0.5) * 20, (Math.random() - 0.5) * 30, 3, 0, Math.PI * 2);
-                    ctx.fill();
-                }
-                
+                this.renderRecursive(ctx, 60 * this.growth, 0, 5);
+                ctx.restore();
+            }
+            renderRecursive(ctx, len, angle, depth) {
+                if(depth <= 0) return;
+                ctx.save();
+                ctx.rotate(angle + Math.sin(this.age + len)*0.03);
+                ctx.strokeStyle = `hsl(${this.hue}, 40%, ${15 + (6-depth)*6}%)`;
+                ctx.lineWidth = depth * 1.5;
+                ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(0, -len); ctx.stroke();
+                ctx.translate(0, -len);
+                this.renderRecursive(ctx, len * 0.75, 0.4, depth - 1);
+                this.renderRecursive(ctx, len * 0.75, -0.4, depth - 1);
                 ctx.restore();
             }
         }
 
-        // Start Game
-        window.addEventListener('load', () => {
-            let progress = 0;
-            const loadingInterval = setInterval(() => {
-                progress += Math.random() * 30;
-                if (progress >= 100) {
-                    progress = 100;
-                    clearInterval(loadingInterval);
-                    setTimeout(() => Game.init(), 500);
+        // --- EL OBSERVADOR (IA HUMANOIDE) ---
+        class Observer {
+            constructor() {
+                this.x = -50; this.y = State.horizon;
+                this.speed = 0.6; this.trip = 0;
+                this.color = "white";
+            }
+            update() {
+                // Lógica de consumo
+                State.plants.forEach(p => {
+                    if(!p.consumed && p.growth > 0.8 && Math.abs(this.x - p.x) < 20) {
+                        p.consumed = true;
+                        this.trip = 500;
+                        State.tripLevel = 1; // Dispara efecto visual global
+                    }
+                });
+
+                this.x += this.speed * (this.trip > 0 ? 2 : 1);
+                if(this.trip > 0) this.trip--;
+                else State.tripLevel *= 0.95;
+
+                return this.x < window.innerWidth + 100;
+            }
+            draw(ctx) {
+                ctx.fillStyle = this.trip > 0 ? State.colors.hall : "white";
+                ctx.fillRect(this.x - 3, this.y - 35, 6, 25);
+                ctx.beginPath(); ctx.arc(this.x, this.y - 40, 5, 0, Math.PI*2); ctx.fill();
+            }
+        }
+
+        // --- ENGINE CORE ---
+
+        function startGame(char) {
+            State.char = char;
+            document.getElementById('selectionOverlay').style.display = 'none';
+            init();
+        }
+
+        function init() {
+            resize();
+            window.onresize = resize;
+            Canvases.game.addEventListener('mousedown', handleInput);
+            requestAnimationFrame(loop);
+            
+            // Ciclos
+            setInterval(() => { if(State.entities.length < 1) State.entities.push(new Observer()); }, 20000);
+            setInterval(saveGame, 10000); // Autoguardado mantenido
+            loadGame();
+        }
+
+        function resize() {
+            State.horizon = window.innerHeight * 0.55;
+            Object.values(Canvases).forEach(c => {
+                c.width = window.innerWidth;
+                c.height = window.innerHeight;
+            });
+        }
+
+        function loop() {
+            const ctxG = Canvases.game.getContext('2d');
+            const ctxS = Canvases.sky.getContext('2d');
+
+            // Efecto Psicoactivo Global (Filtros)
+            if(State.tripLevel > 0.1) {
+                document.body.style.filter = `hue-rotate(${Date.now()*0.1}deg) saturate(1.5)`;
+            } else {
+                document.body.style.filter = 'none';
+            }
+
+            // Fondo y Horizonte
+            ctxS.fillStyle = '#0a1b0a';
+            ctxS.fillRect(0,0, window.innerWidth, window.innerHeight);
+            ctxG.clearRect(0,0, window.innerWidth, window.innerHeight);
+            ctxG.fillStyle = '#050a05';
+            ctxG.fillRect(0, State.horizon, window.innerWidth, window.innerHeight);
+
+            // Plantas
+            State.plants.forEach(p => { p.update(); p.draw(ctxG); });
+
+            // Entidades
+            State.entities = State.entities.filter(e => {
+                const alive = e.update();
+                e.draw(ctxG);
+                return alive;
+            });
+
+            // UI
+            document.getElementById('stat-bio').innerText = Math.floor(State.bio);
+            document.getElementById('stat-flux').innerText = State.tripLevel > 0.1 ? 'ALTERADA' : 'LÚCIDA';
+
+            requestAnimationFrame(loop);
+        }
+
+        // --- INTERACCION Y MINIJUEGOS ---
+
+        function handleInput(e) {
+            const x = e.clientX; const y = e.clientY;
+            if(State.tool === 'seed' && y > State.horizon - 50) {
+                if(State.bio >= 50) {
+                    State.bio -= 50;
+                    State.plants.push(new Plant(x, State.horizon));
                 }
-                document.getElementById('loadingProgress').style.width = progress + '%';
-            }, 100);
-        });
+            }
+        }
+
+        function setTool(t) {
+            State.tool = t;
+            document.querySelectorAll('.tool').forEach(b => b.classList.remove('active'));
+            document.getElementById(`btn-${t}`).classList.add('active');
+        }
+
+        function openModal(type) {
+            const modal = document.getElementById('modal');
+            const inner = document.getElementById('modal-inner');
+            modal.style.display = 'flex';
+
+            if(type === 'shop') {
+                inner.innerHTML = `
+                    <h2>Mercado Negro de Semillas</h2>
+                    <p>Biomasa disponible: ${Math.floor(State.bio)}</p>
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:20px;">
+                        <button class="tool" onclick="buy('fast')">Semilla Sativa (Velocidad)</button>
+                        <button class="tool" onclick="buy('big')">Semilla Índica (Tamaño)</button>
+                    </div>
+                `;
+            } else if(type.startsWith('game')) {
+                inner.innerHTML = `<h2>Minijuego: ${type.toUpperCase()}</h2>
+                <p>Generando pulsos neuronales...</p>
+                <div style="font-size:40px; margin:20px; cursor:pointer;" onclick="State.bio+=10">🧬</div>`;
+            }
+        }
+
+        function closeModal() { document.getElementById('modal').style.display = 'none'; }
+
+        function buy(t) {
+            if(State.bio >= 100) { State.bio -= 100; State.plants.push(new Plant(Math.random()*window.innerWidth, State.horizon)); }
+        }
+
+        // --- GUARDADO (Recuperado de tu web) ---
+        function saveGame() {
+            localStorage.setItem('psychogarden_save', JSON.stringify({ bio: State.bio }));
+        }
+        function loadGame() {
+            const saved = localStorage.getItem('psychogarden_save');
+            if(saved) { const data = JSON.parse(saved); State.bio = data.bio; }
+        }
+
     </script>
 </body>
 </html>
