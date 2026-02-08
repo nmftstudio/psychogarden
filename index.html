@@ -3,16 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>🌿 Overgrown: Genesis Edition</title>
+    <title>🌿 Overgrown: Infinite Ecosystem</title>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --glass: rgba(10, 20, 15, 0.75);
-            --glass-border: rgba(255, 255, 255, 0.08);
-            --accent: #4ade80; /* Green 400 */
-            --accent-dim: #15803d; /* Green 700 */
-            --danger: #f87171;
-            --gold: #fbbf24;
+            --glass: rgba(12, 12, 14, 0.85);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --accent: #4ade80;
             --text: #ecfdf5;
             --font-main: 'Outfit', sans-serif;
             --font-code: 'Space Mono', monospace;
@@ -20,159 +17,76 @@
 
         body, html {
             margin: 0; padding: 0; width: 100%; height: 100%;
-            overflow: hidden;
-            background: #050505;
-            color: var(--text);
-            font-family: var(--font-main);
-            user-select: none;
-            -webkit-font-smoothing: antialiased;
+            overflow: hidden; background: #050505; color: var(--text);
+            font-family: var(--font-main); user-select: none;
         }
 
-        /* --- LAYERS --- */
         canvas { position: absolute; top: 0; left: 0; }
         #skyCanvas { z-index: 0; }
-        #bgCanvas { z-index: 1; } /* Montañas/Nubes */
-        #gameCanvas { z-index: 2; } /* Plantas */
-        #fxCanvas { z-index: 3; pointer-events: none; } /* Clima/Partículas */
+        #bgCanvas { z-index: 1; }
+        #gameCanvas { z-index: 2; } /* Plantas y Animales Terrestres */
+        #fxCanvas { z-index: 3; pointer-events: none; } /* Insectos y Clima */
         #uiLayer { position: absolute; z-index: 10; width: 100%; height: 100%; pointer-events: none; }
 
-        /* --- UI COMPONENTS --- */
+        /* UI Styling */
         .hud-panel {
-            pointer-events: auto;
-            background: var(--glass);
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
-            border: 1px solid var(--glass-border);
-            border-radius: 12px;
-            padding: 12px 20px;
-            box-shadow: 0 4px 24px rgba(0,0,0,0.4);
-            transition: all 0.3s ease;
+            pointer-events: auto; background: var(--glass);
+            backdrop-filter: blur(12px); border: 1px solid var(--glass-border);
+            border-radius: 12px; padding: 12px 16px;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.6);
         }
 
-        /* Top Bar */
         .top-bar {
-            position: absolute;
-            top: 20px; left: 20px; right: 20px;
+            position: absolute; top: 20px; left: 20px; right: 20px;
             display: flex; justify-content: space-between; align-items: flex-start;
         }
 
-        .resource-group { display: flex; gap: 24px; }
-        .stat { display: flex; flex-direction: column; }
-        .stat label { font-size: 10px; text-transform: uppercase; letter-spacing: 1.5px; opacity: 0.6; margin-bottom: 2px; }
-        .stat span { font-family: var(--font-code); font-size: 20px; font-weight: 700; color: var(--accent); }
-        .stat.gold span { color: var(--gold); text-shadow: 0 0 10px rgba(251, 191, 36, 0.4); }
+        .stat-box label { display: block; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: #aaa; margin-bottom: 2px; }
+        .stat-box span { font-family: var(--font-code); font-size: 18px; font-weight: 700; color: var(--accent); }
 
-        .weather-widget { text-align: right; }
-        .weather-icon { font-size: 24px; margin-bottom: 4px; }
-        
-        /* Toolbar (Bottom) */
-        .toolbar-container {
-            position: absolute; bottom: 30px; left: 50%;
-            transform: translateX(-50%);
-            display: flex; gap: 12px;
-            background: rgba(0,0,0,0.5);
-            padding: 8px; border-radius: 24px;
-            backdrop-filter: blur(8px);
-            border: 1px solid var(--glass-border);
-            pointer-events: auto;
+        /* Scanner Widget */
+        #scanner {
+            position: absolute; top: 80px; left: 20px;
+            width: 220px; display: none;
+            border-left: 2px solid var(--accent);
         }
-
+        #scanner h3 { margin: 0 0 5px 0; font-size: 14px; color: var(--accent); }
+        #scanner p { margin: 0; font-size: 11px; color: #ccc; line-height: 1.4; }
+        
+        /* Toolbar */
+        .toolbar {
+            position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%);
+            display: flex; gap: 10px; padding: 8px; border-radius: 20px;
+            background: rgba(0,0,0,0.6); backdrop-filter: blur(10px); pointer-events: auto;
+        }
         .tool-btn {
-            width: 56px; height: 56px;
-            border-radius: 18px;
-            border: none;
-            background: rgba(255,255,255,0.05);
-            color: rgba(255,255,255,0.6);
-            font-size: 22px;
-            cursor: pointer;
-            transition: 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
-            position: relative;
-        }
-        
-        .tool-btn:hover { background: rgba(255,255,255,0.15); transform: translateY(-4px); }
-        .tool-btn.active {
-            background: var(--accent); color: #022c22;
-            box-shadow: 0 0 20px var(--accent-dim);
-            transform: translateY(-8px) scale(1.1);
-            z-index: 2;
-        }
-        
-        /* Market Panel (Right) */
-        #marketPanel {
-            position: absolute; right: 20px; top: 100px; bottom: 120px;
-            width: 280px;
-            transform: translateX(120%); /* Hidden by default */
-            display: flex; flex-direction: column; gap: 10px;
-        }
-        #marketPanel.open { transform: translateX(0); }
-
-        .market-header { font-size: 14px; font-weight: 800; text-transform: uppercase; border-bottom: 1px solid var(--glass-border); padding-bottom: 10px; margin-bottom: 10px; }
-        
-        .upgrade-card {
-            background: rgba(255,255,255,0.03);
-            border: 1px solid var(--glass-border);
-            padding: 12px; border-radius: 8px;
+            width: 50px; height: 50px; border-radius: 12px; border: none;
+            background: rgba(255,255,255,0.1); color: #fff; font-size: 20px;
             cursor: pointer; transition: 0.2s;
-            display: flex; justify-content: space-between; align-items: center;
         }
-        .upgrade-card:hover { background: rgba(255,255,255,0.08); border-color: var(--accent); }
-        .upgrade-info h4 { margin: 0; font-size: 13px; color: #fff; }
-        .upgrade-info p { margin: 4px 0 0; font-size: 11px; color: #aaa; }
-        .price-tag { font-family: var(--font-code); font-size: 12px; color: var(--gold); font-weight: bold; }
+        .tool-btn.active { background: var(--accent); color: #000; transform: translateY(-5px); }
 
-        /* Toggle Market Button */
-        .market-toggle {
-            position: absolute; right: 20px; bottom: 30px;
-            width: 60px; height: 60px; border-radius: 50%;
-            background: var(--glass); border: 1px solid var(--gold);
-            color: var(--gold); font-size: 24px; cursor: pointer;
-            pointer-events: auto; z-index: 20;
-            box-shadow: 0 0 15px rgba(251, 191, 36, 0.2);
+        /* Intro */
+        #intro {
+            position: fixed; z-index: 100; top: 0; left: 0; width: 100%; height: 100%;
+            background: #000; display: flex; flex-direction: column;
+            justify-content: center; align-items: center; transition: opacity 1s;
         }
-
-        /* Intro Screen */
-        #introScreen {
-            position: fixed; z-index: 1000;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: #000;
-            display: flex; flex-direction: column;
-            justify-content: center; align-items: center;
-            transition: opacity 1s;
+        .btn-start {
+            margin-top: 20px; padding: 12px 30px; background: transparent;
+            border: 1px solid var(--accent); color: var(--accent);
+            font-family: var(--font-code); cursor: pointer; text-transform: uppercase;
+            letter-spacing: 2px; transition: 0.3s;
         }
-        
-        .intro-content { text-align: center; opacity: 0; transform: translateY(20px); animation: fadeUp 1s forwards 0.5s; }
-        h1 { font-size: 4rem; margin: 0; background: linear-gradient(to right, #4ade80, #22c55e); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        .start-btn {
-            margin-top: 40px; padding: 16px 48px;
-            background: transparent; border: 1px solid var(--accent);
-            color: var(--accent); font-family: var(--font-code);
-            font-size: 18px; cursor: pointer; border-radius: 4px;
-            transition: 0.3s; text-transform: uppercase; letter-spacing: 2px;
-        }
-        .start-btn:hover { background: var(--accent); color: #000; box-shadow: 0 0 30px var(--accent-dim); }
-
-        @keyframes fadeUp { to { opacity: 1; transform: translateY(0); } }
-
-        /* Toast Notifications */
-        .toast-container { position: absolute; top: 120px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; gap: 8px; align-items: center; }
-        .toast {
-            background: rgba(0,0,0,0.8); border-left: 3px solid var(--accent);
-            padding: 8px 16px; border-radius: 4px; font-size: 12px;
-            animation: slideIn 0.3s forwards, fadeOut 0.5s forwards 2.5s;
-        }
-        @keyframes slideIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
-        @keyframes fadeOut { to { opacity: 0; } }
-
+        .btn-start:hover { background: var(--accent); color: #000; }
     </style>
 </head>
 <body>
 
-    <div id="introScreen">
-        <div class="intro-content">
-            <h1>OVERGROWN</h1>
-            <p style="color: #666; letter-spacing: 4px; margin-top: 10px;">PRO GENESIS SYSTEM</p>
-            <button class="start-btn" onclick="startGame()">Iniciar Simulación</button>
-        </div>
+    <div id="intro">
+        <h1 style="font-weight: 300; font-size: 3rem; margin:0;">GENESIS <span style="color:var(--accent); font-weight:700;">ENGINE</span></h1>
+        <p style="color: #666; font-family: var(--font-code);">Procedural Ecosystem Simulation</p>
+        <button class="btn-start" onclick="initGame()">Inicializar Sistema</button>
     </div>
 
     <canvas id="skyCanvas"></canvas>
@@ -182,611 +96,475 @@
 
     <div id="uiLayer">
         <div class="top-bar">
-            <div class="hud-panel resource-group">
-                <div class="stat gold">
+            <div class="hud-panel" style="display:flex; gap:20px;">
+                <div class="stat-box">
                     <label>Biomasa</label>
-                    <span id="ui-coins">0</span>
+                    <span id="ui-bio">0</span>
                 </div>
-                <div class="stat">
+                <div class="stat-box">
                     <label>Semillas</label>
                     <span id="ui-seeds">0</span>
                 </div>
-                <div class="stat">
-                    <label>Nivel Eco</label>
-                    <span id="ui-level">1</span>
+                <div class="stat-box">
+                    <label>Especies</label>
+                    <span id="ui-species">0</span>
                 </div>
             </div>
-
-            <div class="hud-panel weather-widget">
-                <div class="weather-icon" id="ui-weather-icon">☀️</div>
-                <div class="stat">
-                    <label id="ui-weather-text">Despejado</label>
-                    <span id="ui-time" style="font-size: 16px;">12:00</span>
-                </div>
-            </div>
-        </div>
-
-        <div class="toast-container" id="toastContainer"></div>
-
-        <div class="toolbar-container">
-            <button class="tool-btn active" onclick="Game.setTool('plant')" data-tool="plant" title="Plantar">🌱</button>
-            <button class="tool-btn" onclick="Game.setTool('water')" data-tool="water" title="Regar">💧</button>
-            <button class="tool-btn" onclick="Game.setTool('fertilize')" data-tool="fertilize" title="Mutar ADN">🧬</button>
-            <button class="tool-btn" onclick="Game.setTool('harvest')" data-tool="harvest" title="Cosechar">✨</button>
-        </div>
-
-        <button class="market-toggle" onclick="Game.toggleMarket()">🛒</button>
-
-        <div id="marketPanel" class="hud-panel">
-            <div class="market-header">Laboratorio Genético</div>
             
-            <div class="upgrade-card" onclick="Market.buy('seed_pack')">
-                <div class="upgrade-info">
-                    <h4>Pack de Semillas</h4>
-                    <p>+3 Semillas Híbridas</p>
-                </div>
-                <div class="price-tag">50 Bio</div>
+            <div class="hud-panel stat-box" style="text-align: right;">
+                <label id="ui-weather">Analizando Atmósfera...</label>
+                <span id="ui-fauna-count">0 Animales Detectados</span>
             </div>
+        </div>
 
-            <div class="upgrade-card" onclick="Market.buy('growth_hormone')">
-                <div class="upgrade-info">
-                    <h4>Hormonas de Crecimiento</h4>
-                    <p>Plantas crecen 20% más rápido</p>
-                </div>
-                <div class="price-tag">200 Bio</div>
-            </div>
+        <div id="scanner" class="hud-panel">
+            <h3>🧬 Análisis de ADN</h3>
+            <p id="scan-info">Selecciona una planta...</p>
+        </div>
 
-            <div class="upgrade-card" onclick="Market.buy('dna_splice')">
-                <div class="upgrade-info">
-                    <h4>Empalme Genético</h4>
-                    <p>Valor de venta x1.5</p>
-                </div>
-                <div class="price-tag">500 Bio</div>
-            </div>
-
-             <div class="upgrade-card" onclick="Market.buy('cloud_seeding')">
-                <div class="upgrade-info">
-                    <h4>Siembra de Nubes</h4>
-                    <p>Aumenta probabilidad de lluvia</p>
-                </div>
-                <div class="price-tag">300 Bio</div>
-            </div>
+        <div class="toolbar">
+            <button class="tool-btn active" onclick="setTool('seed')" title="Plantar (Click)">🌱</button>
+            <button class="tool-btn" onclick="setTool('water')" title="Regar">💧</button>
+            <button class="tool-btn" onclick="setTool('mutate')" title="Mutar (+Bio)">🧬</button>
+            <button class="tool-btn" onclick="setTool('harvest')" title="Cosechar">✨</button>
         </div>
     </div>
 
     <script>
-        /* * OVERGROWN PRO: FINAL EDITION
-         * Incluye: L-Systems, Mercado, Clima, Ciclo Día/Noche, Audio, Persistencia.
+        /**
+         * GENESIS ENGINE
+         * Sistema de generación procedimental de flora y fauna basado en ADN.
          */
 
-        // --- CONFIGURACIÓN GLOBAL ---
-        const Config = {
-            colors: {
-                skyDay: '#38bdf8',
-                skyNight: '#0f172a',
-                sun: '#fcd34d',
-                moon: '#e2e8f0',
-                rain: 'rgba(148, 163, 184, 0.5)'
-            },
-            audio: {
-                enabled: true,
-                volume: 0.1
-            }
+        const CFG = {
+            w: 0, h: 0,
+            groundY: 0,
+            colors: { day: '#38bdf8', night: '#0f172a', sun: '#fcd34d', moon: '#e2e8f0' }
         };
 
-        // --- SISTEMA DE AUDIO (SINTETIZADOR) ---
-        const Sound = {
-            ctx: null,
-            init: () => {
-                Sound.ctx = new (window.AudioContext || window.webkitAudioContext)();
-            },
-            play: (type) => {
-                if (!Sound.ctx) return;
-                const t = Sound.ctx.currentTime;
-                const osc = Sound.ctx.createOscillator();
-                const gain = Sound.ctx.createGain();
-                
-                osc.connect(gain);
-                gain.connect(Sound.ctx.destination);
+        const STATE = {
+            bio: 100, seeds: 5, time: 8, tool: 'seed',
+            plants: [], animals: [], particles: [],
+            weather: 'sunny',
+            discoveredSpecies: new Set()
+        };
 
-                if (type === 'click') {
-                    osc.frequency.setValueAtTime(800, t);
-                    osc.frequency.exponentialRampToValueAtTime(400, t + 0.1);
-                    gain.gain.setValueAtTime(0.05, t);
-                    gain.gain.linearRampToValueAtTime(0, t + 0.1);
-                    osc.start(t); osc.stop(t + 0.1);
-                } else if (type === 'coin') {
-                    osc.type = 'sine';
-                    osc.frequency.setValueAtTime(1200, t);
-                    osc.frequency.setValueAtTime(1600, t + 0.1);
-                    gain.gain.setValueAtTime(0.05, t);
-                    gain.gain.linearRampToValueAtTime(0, t + 0.3);
-                    osc.start(t); osc.stop(t + 0.3);
-                } else if (type === 'rain') {
-                    // White noise buffer logic omitted for brevity, using simple low freq
-                    osc.type = 'triangle';
-                    osc.frequency.setValueAtTime(50, t);
-                    gain.gain.setValueAtTime(0.01, t);
-                    osc.start(t); osc.stop(t + 0.1);
+        // --- MOTOR DE ADN (PROCEDURAL GENERATION) ---
+        
+        class DNA {
+            constructor(parentDNA = null) {
+                if (parentDNA) {
+                    // Evolución con mutación
+                    this.hue = parentDNA.hue + (Math.random() * 20 - 10);
+                    this.type = Math.random() < 0.1 ? this.randomType() : parentDNA.type; // 10% chance cambio drastico
+                    this.height = parentDNA.height * (0.9 + Math.random() * 0.2);
+                    this.branchAngle = parentDNA.branchAngle + (Math.random() * 0.1 - 0.05);
+                    this.complexity = parentDNA.complexity;
+                    this.leafShape = parentDNA.leafShape;
+                } else {
+                    // Generación espontánea (Semilla nueva)
+                    this.hue = Math.random() * 360;
+                    this.type = this.randomType(); // 'tree', 'bush', 'flower', 'cactus'
+                    this.height = 50 + Math.random() * 100;
+                    this.branchAngle = 0.3 + Math.random() * 0.5;
+                    this.complexity = 3 + Math.floor(Math.random() * 3);
+                    this.leafShape = Math.floor(Math.random() * 4); // 0:circle, 1:oval, 2:needle, 3:flower
                 }
+                
+                // Determinar atracción de fauna basada en fenotipo
+                this.attracts = this.determineAttraction();
+                this.name = this.generateName();
             }
-        };
 
-        // --- CLASES DEL MOTOR ---
+            randomType() {
+                const r = Math.random();
+                if(r < 0.4) return 'flower';
+                if(r < 0.7) return 'bush';
+                if(r < 0.9) return 'tree';
+                return 'alien';
+            }
+
+            determineAttraction() {
+                if (this.type === 'flower') return 'insect'; // Abejas, Mariposas
+                if (this.type === 'tree' && this.height > 100) return 'bird'; // Pájaros
+                if (this.type === 'bush') return 'mammal'; // Conejos
+                return 'none';
+            }
+
+            generateName() {
+                const p1 = ['Mega', 'Micro', 'Hydro', 'Pyro', 'Chrono', 'Lumi', 'Shadow', 'Wild'];
+                const p2 = ['Fern', 'Rose', 'Oak', 'Cactus', 'Weed', 'Bloom', 'Sprout', 'Root'];
+                const hex = Math.floor(this.hue).toString(16).toUpperCase();
+                return `${p1[Math.floor(Math.random()*p1.length)]}-${p2[Math.floor(Math.random()*p2.length)]} ${hex}`;
+            }
+        }
+
+        // --- SISTEMA DE FLORA ---
 
         class Plant {
-            constructor(x, y) {
-                this.x = x;
-                this.y = y;
+            constructor(x, y, dna = null) {
+                this.x = x; this.y = y;
+                this.dna = dna || new DNA();
                 this.age = 0;
                 this.maxAge = 100 + Math.random() * 50;
-                this.dna = {
-                    color: `hsl(${Math.random() * 60 + 80}, ${60 + Math.random()*20}%, ${30 + Math.random()*20}%)`,
-                    leafColor: `hsl(${Math.random() * 360}, 70%, 60%)`,
-                    branchAngle: (Math.PI / (3 + Math.random() * 4)),
-                    complexity: 4 + Math.floor(Math.random() * 2), // Niveles de recursión
-                    valueMult: 1
-                };
-                this.state = 'growing'; // growing, mature, dead
-                this.water = 80;
-                this.swayOffset = Math.random() * 100;
-            }
-
-            update(dt, env) {
-                // Lógica de crecimiento
-                let growthFactor = 0.1 * env.growthMod;
+                this.growthRate = 0.2;
+                this.state = 'growing';
                 
-                // El clima afecta
-                if (env.weather === 'rain') {
-                    this.water = Math.min(this.water + 0.5, 100);
-                    growthFactor *= 1.5;
-                } else if (env.isDay) {
-                    this.water -= 0.05;
-                } else {
-                    growthFactor *= 0.2; // Crece lento de noche
-                }
+                STATE.discoveredSpecies.add(this.dna.name);
+            }
 
-                // Penalización por sequía
-                if (this.water <= 0) {
-                    this.water = 0;
-                    growthFactor = 0;
-                    // Posibilidad de morir si se deja seco mucho tiempo (no implementado para no frustrar)
-                }
-
+            update() {
                 if (this.state === 'growing') {
-                    this.age += growthFactor;
-                    if (this.age >= this.maxAge) {
-                        this.state = 'mature';
-                        UI.toast("¡Planta lista para cosechar!");
-                    }
+                    this.age += this.growthRate;
+                    if (this.age >= this.maxAge) this.state = 'mature';
+                }
+                // Probabilidad de spawnear fauna si está madura
+                if (this.state === 'mature' && Math.random() < 0.002) {
+                    spawnFauna(this);
                 }
             }
 
-            draw(ctx, wind) {
+            draw(ctx) {
                 ctx.save();
                 ctx.translate(this.x, this.y);
-                
-                const scale = Math.min(this.age / 40, 1.5);
+                const scale = Math.min(this.age / 50, 1.5);
                 ctx.scale(scale, scale);
 
-                // Indicador de sed
-                if (this.water < 20) {
-                    ctx.fillStyle = 'red';
-                    ctx.fillRect(-5, -10, 10, 2);
-                }
+                const color = `hsl(${this.dna.hue}, 60%, 40%)`;
+                ctx.strokeStyle = color;
+                ctx.fillStyle = color;
+                ctx.lineCap = 'round';
+                ctx.lineWidth = this.dna.type === 'tree' ? 8 : 4;
 
-                // Dibujar recursivamente
-                const sway = Math.sin(Date.now() / 1000 + this.swayOffset) * wind * 0.05;
-                this.drawBranch(ctx, 30, 0, this.dna.complexity, sway);
-
+                this.drawBranch(ctx, this.dna.height * 0.2, 0, this.dna.complexity);
                 ctx.restore();
             }
 
-            drawBranch(ctx, len, angle, depth, sway) {
+            drawBranch(ctx, len, angle, depth) {
                 if (depth === 0) {
-                    // Dibujar flor/hoja
-                    ctx.beginPath();
-                    ctx.fillStyle = this.dna.leafColor;
-                    if (this.state === 'mature') {
-                        ctx.arc(0, 0, 6, 0, Math.PI * 2); // Fruto/Flor grande
-                        // Efecto de brillo
-                        ctx.shadowBlur = 10;
-                        ctx.shadowColor = this.dna.leafColor;
-                    } else {
-                        ctx.ellipse(0, 0, 4, 2, angle, 0, Math.PI * 2); // Hoja
-                    }
-                    ctx.fill();
-                    ctx.shadowBlur = 0;
+                    this.drawLeaf(ctx);
                     return;
                 }
 
-                ctx.lineWidth = depth * 1.5;
-                ctx.strokeStyle = this.water < 20 ? '#5d4037' : this.dna.color; // Marrón si seco
-                ctx.lineCap = 'round';
-
-                ctx.save();
-                ctx.rotate(angle + sway);
+                // Curvatura orgánica usando seno y viento
+                const wind = Math.sin(Date.now() / 1000 + this.x) * 0.05 * (depth + 1);
                 
+                ctx.save();
+                ctx.rotate(angle + wind);
+                
+                // Rama curva
                 ctx.beginPath();
                 ctx.moveTo(0, 0);
-                ctx.lineTo(0, -len);
+                if (this.dna.type === 'alien') {
+                    // Ramas zig-zag
+                    ctx.lineTo(0, -len/2);
+                    ctx.translate(5, -len/2);
+                    ctx.lineTo(0, -len);
+                } else {
+                    ctx.quadraticCurveTo(5, -len/2, 0, -len);
+                }
                 ctx.stroke();
 
                 ctx.translate(0, -len);
+                const newLen = len * 0.8;
                 
                 // Recursión
-                const newLen = len * 0.75;
-                this.drawBranch(ctx, newLen, -this.dna.branchAngle, depth - 1, sway);
-                this.drawBranch(ctx, newLen, this.dna.branchAngle, depth - 1, sway);
-                
+                const branches = this.dna.type === 'bush' ? 3 : 2;
+                for(let i=0; i<branches; i++) {
+                    const spread = this.dna.branchAngle;
+                    const a = -spread + (i * spread * 2 / (branches-1 || 1));
+                    
+                    ctx.save();
+                    ctx.lineWidth *= 0.7;
+                    this.drawBranch(ctx, newLen, a, depth - 1);
+                    ctx.restore();
+                }
                 ctx.restore();
             }
-        }
 
-        class Cloud {
-            constructor(w) {
-                this.x = Math.random() * w;
-                this.y = Math.random() * 150 + 20;
-                this.speed = Math.random() * 0.2 + 0.1;
-                this.size = Math.random() * 40 + 30;
-                this.opacity = Math.random() * 0.3 + 0.1;
-            }
-            update(w) {
-                this.x += this.speed;
-                if (this.x > w + 100) this.x = -100;
-            }
-            draw(ctx) {
-                ctx.fillStyle = `rgba(255,255,255,${this.opacity})`;
+            drawLeaf(ctx) {
+                const type = this.dna.leafShape;
+                const leafColor = `hsl(${this.dna.hue + 30}, 80%, 60%)`;
+                ctx.fillStyle = leafColor;
+                
                 ctx.beginPath();
-                ctx.arc(this.x, this.y, this.size, 0, Math.PI*2);
-                ctx.arc(this.x + 30, this.y - 10, this.size * 0.8, 0, Math.PI*2);
-                ctx.arc(this.x + 50, this.y + 5, this.size * 0.9, 0, Math.PI*2);
+                if (type === 0) { // Círculo (Flores)
+                    ctx.arc(0, 0, 5, 0, Math.PI*2);
+                } else if (type === 1) { // Oval (Hojas estándar)
+                    ctx.ellipse(0, 0, 6, 3, Math.PI/4, 0, Math.PI*2);
+                } else if (type === 2) { // Agujas (Pinos/Cactus)
+                    ctx.moveTo(0,0); ctx.lineTo(-2,-10); ctx.lineTo(2,-10);
+                } else { // Exótica
+                    ctx.arc(0, 0, 3, 0, Math.PI*2);
+                    ctx.shadowBlur = 5; ctx.shadowColor = leafColor;
+                }
                 ctx.fill();
+                ctx.shadowBlur = 0;
             }
         }
 
-        class Particle {
-            constructor(x, y, type) {
-                this.x = x; this.y = y; this.type = type;
-                this.life = 1;
+        // --- SISTEMA DE FAUNA ---
+
+        class Animal {
+            constructor(type, targetPlant) {
+                this.type = type; // 'bee', 'butterfly', 'rabbit', 'bird'
+                this.target = targetPlant;
+                this.x = type === 'bird' ? Math.random() * CFG.w : targetPlant.x;
+                this.y = type === 'bird' ? 50 : targetPlant.y - 20;
                 this.vx = (Math.random() - 0.5) * 2;
-                this.vy = (Math.random() - 0.5) * 2 - 2; // Upward
-                if (type === 'rain') {
-                    this.vx = 1; this.vy = 15; this.life = 1;
-                }
+                this.vy = (Math.random() - 0.5) * 2;
+                this.life = 500 + Math.random() * 500;
+                this.size = type === 'mammal' ? 15 : 5;
             }
+
             update() {
-                this.x += this.vx; this.y += this.vy;
-                this.life -= 0.02;
-            }
-            draw(ctx) {
-                ctx.globalAlpha = this.life;
-                if (this.type === 'rain') {
-                    ctx.strokeStyle = Config.colors.rain;
-                    ctx.lineWidth = 2;
-                    ctx.beginPath(); ctx.moveTo(this.x, this.y); ctx.lineTo(this.x - 2, this.y - 10); ctx.stroke();
-                } else {
-                    ctx.fillStyle = this.type === 'gold' ? Config.colors.sun : '#fff';
-                    ctx.beginPath(); ctx.arc(this.x, this.y, 2, 0, Math.PI*2); ctx.fill();
+                this.life--;
+                
+                if (this.type === 'insect') {
+                    // Vuelo errático alrededor de la planta
+                    const dx = this.target.x - this.x;
+                    const dy = (this.target.y - this.target.dna.height) - this.y;
+                    this.vx += dx * 0.001 + (Math.random()-0.5);
+                    this.vy += dy * 0.001 + (Math.random()-0.5);
+                    this.vx *= 0.95; this.vy *= 0.95;
+                } else if (this.type === 'mammal') {
+                    // Saltos en el suelo
+                    this.vy += 0.2; // Gravedad
+                    if (this.y >= CFG.groundY) {
+                        this.y = CFG.groundY;
+                        this.vy = -Math.random() * 5 - 2; // Salto
+                        this.vx = (Math.random() - 0.5) * 4;
+                    }
+                } else if (this.type === 'bird') {
+                    this.x += 2;
+                    this.y += Math.sin(this.x * 0.05);
                 }
-                ctx.globalAlpha = 1;
+
+                this.x += this.vx;
+                this.y += this.vy;
+            }
+
+            draw(ctx) {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                if (this.vx < 0) ctx.scale(-1, 1); // Voltear sprite si va a la izq
+
+                ctx.fillStyle = this.getFaunaColor();
+                
+                if (this.type === 'insect') {
+                    // Dibujar mariposa simple
+                    const wing = Math.abs(Math.sin(Date.now() * 0.02)) * 5;
+                    ctx.beginPath();
+                    ctx.arc(-2, -wing, 3, 0, Math.PI*2);
+                    ctx.arc(2, -wing, 3, 0, Math.PI*2);
+                    ctx.fill();
+                } else if (this.type === 'mammal') {
+                    // Dibujar conejo/bicho silueta
+                    ctx.beginPath();
+                    ctx.arc(0, 0, 8, 0, Math.PI*2); // Cuerpo
+                    ctx.ellipse(5, -8, 2, 6, -0.2, 0, Math.PI*2); // Oreja
+                    ctx.fill();
+                } else if (this.type === 'bird') {
+                    // V
+                    ctx.beginPath();
+                    ctx.moveTo(-5, 0); ctx.lineTo(0, 2); ctx.lineTo(5, 0);
+                    ctx.stroke();
+                }
+
+                ctx.restore();
+            }
+
+            getFaunaColor() {
+                if(this.type === 'insect') return '#fbbf24'; // Dorado
+                if(this.type === 'mammal') return '#a8a29e'; // Grisáceo
+                return '#fff';
             }
         }
 
-        // --- GESTOR DEL JUEGO (SINGLETON) ---
-
-        const Game = {
-            state: {
-                biomass: 150,
-                seeds: 3,
-                level: 1,
-                tool: 'plant',
-                weather: 'sunny', // sunny, rain
-                rainChance: 0.001,
-                time: 8, // 0-24
-                growthMod: 1.0,
-                sellMod: 1.0
-            },
-            entities: {
-                plants: [],
-                particles: [],
-                clouds: []
-            },
-            canvases: {},
-            ctx: {},
-            dims: { w: 0, h: 0 },
-
-            init: () => {
-                // Setup Canvas
-                ['sky', 'bg', 'game', 'fx'].forEach(id => {
-                    const c = document.getElementById(id + 'Canvas');
-                    Game.canvases[id] = c;
-                    Game.ctx[id] = c.getContext('2d');
-                });
-                
-                window.addEventListener('resize', Game.resize);
-                Game.resize();
-                
-                // Inputs
-                window.addEventListener('mousedown', Game.handleClick);
-                
-                // Init Entities
-                for(let i=0; i<10; i++) Game.entities.clouds.push(new Cloud(Game.dims.w));
-
-                // Load Save
-                Game.load();
-                
-                // Start Loop
-                requestAnimationFrame(Game.loop);
-                
-                // Autosave
-                setInterval(Game.save, 10000);
-            },
-
-            resize: () => {
-                Game.dims.w = window.innerWidth;
-                Game.dims.h = window.innerHeight;
-                Object.values(Game.canvases).forEach(c => { c.width = Game.dims.w; c.height = Game.dims.h; });
-            },
-
-            setTool: (tool) => {
-                Game.state.tool = tool;
-                Sound.play('click');
-                document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
-                document.querySelector(`[data-tool="${tool}"]`).classList.add('active');
-            },
-
-            toggleMarket: () => {
-                document.getElementById('marketPanel').classList.toggle('open');
-                Sound.play('click');
-            },
-
-            handleClick: (e) => {
-                const rect = Game.canvases.game.getBoundingClientRect();
-                const x = e.clientX - rect.left;
-                const y = e.clientY - rect.top;
-
-                // Click en planta?
-                const plant = Game.entities.plants.find(p => Math.abs(p.x - x) < 40 && Math.abs(p.y - y) < 80);
-
-                if (Game.state.tool === 'plant') {
-                    if (plant) return;
-                    if (y < Game.dims.h * 0.5) { UI.toast("El suelo está muy lejos..."); return; }
-                    if (Game.state.seeds > 0) {
-                        Game.state.seeds--;
-                        Game.entities.plants.push(new Plant(x, y));
-                        UI.spawnParticles(x, y, 'dirt');
-                        Sound.play('click');
-                    } else {
-                        UI.toast("¡Sin semillas! Compra en el mercado.");
-                    }
-                } else if (plant) {
-                    if (Game.state.tool === 'water') {
-                        plant.water = 100;
-                        UI.spawnParticles(x, y-40, 'water');
-                    } else if (Game.state.tool === 'fertilize') {
-                        if (Game.state.biomass >= 10) {
-                            Game.state.biomass -= 10;
-                            plant.dna.color = `hsl(${Math.random()*360}, 80%, 60%)`;
-                            plant.growthRate += 0.5;
-                            UI.spawnParticles(x, y-40, 'gold');
-                        } else {
-                            UI.toast("Necesitas 10 Biomasa para fertilizar");
-                        }
-                    } else if (Game.state.tool === 'harvest') {
-                        if (plant.state === 'mature') {
-                            const val = Math.floor(plant.age * 2 * Game.state.sellMod);
-                            Game.state.biomass += val;
-                            UI.toast(`+${val} Biomasa`);
-                            UI.spawnParticles(x, y-50, 'gold', 20);
-                            Sound.play('coin');
-                            // Eliminar planta
-                            Game.entities.plants = Game.entities.plants.filter(p => p !== plant);
-                        } else {
-                            UI.toast("Aún no está lista...");
-                        }
-                    }
-                }
-                UI.update();
-            },
-
-            updateWeather: () => {
-                // Ciclo día/noche rápido
-                Game.state.time += 0.01;
-                if (Game.state.time >= 24) Game.state.time = 0;
-
-                // Probabilidad lluvia
-                if (Game.state.weather === 'sunny' && Math.random() < Game.state.rainChance) {
-                    Game.state.weather = 'rain';
-                    UI.toast("☁️ Está empezando a llover...");
-                } else if (Game.state.weather === 'rain' && Math.random() < 0.005) {
-                    Game.state.weather = 'sunny';
-                    UI.toast("☀️ El cielo se despeja.");
-                }
-            },
-
-            loop: () => {
-                // Logic
-                Game.updateWeather();
-                
-                const env = { 
-                    weather: Game.state.weather, 
-                    isDay: Game.state.time > 6 && Game.state.time < 18,
-                    growthMod: Game.state.growthMod
-                };
-
-                // Clear
-                Object.values(Game.ctx).forEach(ctx => ctx.clearRect(0,0, Game.dims.w, Game.dims.h));
-
-                // 1. Sky & Sun/Moon
-                const sCtx = Game.ctx.sky;
-                const t = Game.state.time;
-                let bg = Config.colors.skyDay;
-                if (!env.isDay) bg = Config.colors.skyNight;
-                
-                // Interpolación simple de color (podría mejorarse)
-                sCtx.fillStyle = bg;
-                sCtx.fillRect(0,0, Game.dims.w, Game.dims.h);
-
-                // Celestial Body
-                const cx = Game.dims.w/2 + Math.cos(t/24 * 6.28) * (Game.dims.w/2 - 50);
-                const cy = Game.dims.h + Math.sin(t/24 * 6.28) * (Game.dims.h/2);
-                sCtx.beginPath();
-                sCtx.arc(cx, cy, 60, 0, Math.PI*2);
-                sCtx.fillStyle = env.isDay ? Config.colors.sun : Config.colors.moon;
-                sCtx.shadowBlur = 50;
-                sCtx.shadowColor = sCtx.fillStyle;
-                sCtx.fill();
-                sCtx.shadowBlur = 0;
-
-                // 2. BG (Clouds & Mountains)
-                const bCtx = Game.ctx.bg;
-                Game.entities.clouds.forEach(c => { c.update(Game.dims.w); c.draw(bCtx); });
-                
-                // Mountains
-                bCtx.fillStyle = '#111';
-                bCtx.beginPath();
-                bCtx.moveTo(0, Game.dims.h);
-                bCtx.lineTo(0, Game.dims.h - 150);
-                for(let i=0; i<=Game.dims.w; i+=50) {
-                    bCtx.lineTo(i, Game.dims.h - 150 - Math.random()*20);
-                }
-                bCtx.lineTo(Game.dims.w, Game.dims.h);
-                bCtx.fill();
-
-                // 3. Game (Plants & Ground)
-                const gCtx = Game.ctx.game;
-                // Ground
-                const grad = gCtx.createLinearGradient(0, Game.dims.h-100, 0, Game.dims.h);
-                grad.addColorStop(0, '#1c1917');
-                grad.addColorStop(1, '#000');
-                gCtx.fillStyle = grad;
-                gCtx.fillRect(0, Game.dims.h - 100, Game.dims.w, 100);
-
-                // Wind calc
-                const wind = Math.sin(Date.now()/1000) + (Game.state.weather === 'rain' ? 2 : 0);
-                
-                Game.entities.plants.forEach(p => {
-                    p.update(0.16, env);
-                    p.draw(gCtx, wind);
-                });
-
-                // 4. FX (Rain & Particles)
-                const fCtx = Game.ctx.fx;
-                if (Game.state.weather === 'rain') {
-                    for(let i=0; i<5; i++) Game.entities.particles.push(new Particle(Math.random()*Game.dims.w, 0, 'rain'));
-                }
-
-                Game.entities.particles.forEach((p, i) => {
-                    p.update();
-                    p.draw(fCtx);
-                    if (p.life <= 0) Game.entities.particles.splice(i, 1);
-                });
-
-                // UI Updates
-                if (Math.floor(Date.now()/1000) % 2 === 0) UI.update(); // Throttle UI updates
-
-                requestAnimationFrame(Game.loop);
-            },
-
-            save: () => {
-                const data = {
-                    biomass: Game.state.biomass,
-                    seeds: Game.state.seeds,
-                    level: Game.state.level,
-                    upgrades: { growth: Game.state.growthMod, sell: Game.state.sellMod }
-                };
-                localStorage.setItem('overgrown_save', JSON.stringify(data));
-            },
-
-            load: () => {
-                const saved = localStorage.getItem('overgrown_save');
-                if (saved) {
-                    const data = JSON.parse(saved);
-                    Game.state.biomass = data.biomass || 0;
-                    Game.state.seeds = data.seeds || 3;
-                    Game.state.level = data.level || 1;
-                    Game.state.growthMod = data.upgrades?.growth || 1;
-                    Game.state.sellMod = data.upgrades?.sell || 1;
-                    UI.update();
-                }
-            }
-        };
-
-        // --- SISTEMA DE MERCADO ---
-        const Market = {
-            buy: (item) => {
-                const s = Game.state;
-                let cost = 0;
-                let success = false;
-
-                if (item === 'seed_pack') {
-                    cost = 50;
-                    if (s.biomass >= cost) { s.biomass -= cost; s.seeds += 3; success = true; }
-                } 
-                else if (item === 'growth_hormone') {
-                    cost = 200;
-                    if (s.biomass >= cost) { s.biomass -= cost; s.growthMod += 0.2; success = true; }
-                }
-                else if (item === 'dna_splice') {
-                    cost = 500;
-                    if (s.biomass >= cost) { s.biomass -= cost; s.sellMod += 0.5; success = true; }
-                }
-                else if (item === 'cloud_seeding') {
-                    cost = 300;
-                    if (s.biomass >= cost) { s.biomass -= cost; s.rainChance += 0.005; Game.state.weather = 'rain'; success = true; }
-                }
-
-                if (success) {
-                    Sound.play('coin');
-                    UI.toast("¡Compra exitosa!");
-                    UI.update();
-                    Game.save();
-                } else {
-                    UI.toast("Insuficiente Biomasa");
-                }
-            }
-        };
-
-        // --- UI HELPERS ---
-        const UI = {
-            update: () => {
-                document.getElementById('ui-coins').innerText = Math.floor(Game.state.biomass);
-                document.getElementById('ui-seeds').innerText = Game.state.seeds;
-                document.getElementById('ui-level').innerText = Game.state.level;
-                
-                const timeStr = Math.floor(Game.state.time).toString().padStart(2, '0') + ":00";
-                document.getElementById('ui-time').innerText = timeStr;
-                
-                const wIcon = Game.state.weather === 'sunny' ? '☀️' : '🌧️';
-                document.getElementById('ui-weather-icon').innerText = wIcon;
-                document.getElementById('ui-weather-text').innerText = Game.state.weather === 'sunny' ? "Despejado" : "Lluvia";
-            },
+        function spawnFauna(plant) {
+            const faunaType = plant.dna.attracts;
+            if (faunaType === 'none') return;
             
-            toast: (msg) => {
-                const con = document.getElementById('toastContainer');
-                const el = document.createElement('div');
-                el.className = 'toast';
-                el.innerText = msg;
-                con.appendChild(el);
-                setTimeout(() => el.remove(), 3000);
-            },
+            // Límite de población
+            if (STATE.animals.length > 30) return;
 
-            spawnParticles: (x, y, type, count = 10) => {
-                for(let i=0; i<count; i++) {
-                    Game.entities.particles.push(new Particle(x, y, type));
+            STATE.animals.push(new Animal(faunaType, plant));
+            updateUI();
+        }
+
+        // --- CORE FUNCTIONS ---
+
+        const cvs = {};
+        const ctx = {};
+
+        function initGame() {
+            document.getElementById('intro').style.opacity = 0;
+            setTimeout(() => document.getElementById('intro').remove(), 1000);
+
+            ['sky', 'bg', 'game', 'fx'].forEach(id => {
+                cvs[id] = document.getElementById(id + 'Canvas');
+                ctx[id] = cvs[id].getContext('2d');
+            });
+
+            window.addEventListener('resize', resize);
+            resize();
+
+            window.addEventListener('mousedown', handleInput);
+            
+            // Autosave loop
+            loop();
+        }
+
+        function resize() {
+            CFG.w = window.innerWidth;
+            CFG.h = window.innerHeight;
+            CFG.groundY = CFG.h - 50;
+            
+            Object.values(cvs).forEach(c => {
+                c.width = CFG.w;
+                c.height = CFG.h;
+            });
+        }
+
+        function loop() {
+            requestAnimationFrame(loop);
+            
+            // Limpiar
+            Object.values(ctx).forEach(c => c.clearRect(0, 0, CFG.w, CFG.h));
+
+            // 1. Cielo y Ciclo Día
+            STATE.time += 0.005;
+            if (STATE.time > 24) STATE.time = 0;
+            drawSky();
+
+            // 2. Fondo (Montañas generadas)
+            drawMountains(ctx.bg);
+
+            // 3. Juego (Plantas y Animales)
+            // Suelo
+            ctx.game.fillStyle = '#1c1917';
+            ctx.game.fillRect(0, CFG.groundY, CFG.w, 100);
+
+            STATE.plants.forEach(p => {
+                p.update();
+                p.draw(ctx.game);
+            });
+
+            // Ordenar animales por Y para profundidad
+            STATE.animals.forEach((a, i) => {
+                a.update();
+                a.draw(ctx.game); // Dibujamos animales en capa de juego
+                if(a.life <= 0) STATE.animals.splice(i, 1);
+            });
+
+            updateUI();
+        }
+
+        function drawSky() {
+            const isDay = STATE.time > 6 && STATE.time < 18;
+            const c = ctx.sky;
+            const bg = isDay ? CFG.colors.day : CFG.colors.night;
+            c.fillStyle = bg;
+            c.fillRect(0,0, CFG.w, CFG.h);
+
+            // Sol / Luna
+            const cx = CFG.w/2 + Math.cos(STATE.time/24 * 6.28) * (CFG.w/2 - 50);
+            const cy = CFG.h + Math.sin(STATE.time/24 * 6.28) * (CFG.h/2);
+            c.beginPath();
+            c.arc(cx, cy, 40, 0, Math.PI*2);
+            c.fillStyle = isDay ? CFG.colors.sun : CFG.colors.moon;
+            c.shadowBlur = 40; c.shadowColor = c.fillStyle;
+            c.fill(); c.shadowBlur = 0;
+        }
+
+        function drawMountains(c) {
+            c.fillStyle = '#111';
+            c.beginPath();
+            c.moveTo(0, CFG.h);
+            for(let i=0; i<=CFG.w; i+=10) {
+                // Generación de terreno simple usando ruido pseudo-aleatorio
+                const h = Math.sin(i * 0.01) * 50 + Math.sin(i * 0.03) * 20;
+                c.lineTo(i, CFG.h - 100 - h);
+            }
+            c.lineTo(CFG.w, CFG.h);
+            c.fill();
+        }
+
+        function handleInput(e) {
+            const rect = cvs.game.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+
+            // Detectar click en planta
+            const clickedPlant = STATE.plants.find(p => Math.abs(p.x - x) < 30 && Math.abs(p.y - p.dna.height/2 - y) < p.dna.height);
+
+            if (clickedPlant) {
+                // Mostrar Info ADN
+                showScanner(clickedPlant);
+                
+                if (STATE.tool === 'harvest' && clickedPlant.state === 'mature') {
+                    // Cosechar = +Semillas del mismo tipo (Clon) + Mutación leve
+                    STATE.bio += 20;
+                    if (Math.random() > 0.3) {
+                        STATE.seeds++;
+                        // Guardamos el ADN para la próxima semilla
+                        STATE.lastDNA = clickedPlant.dna; 
+                    }
+                    STATE.plants = STATE.plants.filter(p => p !== clickedPlant);
+                } else if (STATE.tool === 'mutate') {
+                    if (STATE.bio >= 50) {
+                        STATE.bio -= 50;
+                        clickedPlant.dna = new DNA(clickedPlant.dna); // Re-roll genético
+                        createParticles(x, y - 50, '#a78bfa');
+                    }
+                }
+            } else {
+                // Click en suelo vacio
+                if (STATE.tool === 'seed' && y > CFG.groundY - 100) {
+                    if (STATE.seeds > 0) {
+                        STATE.seeds--;
+                        // Si cosechamos antes, usamos ese ADN con mutación, si no, uno nuevo
+                        const dna = STATE.lastDNA ? new DNA(STATE.lastDNA) : new DNA();
+                        STATE.plants.push(new Plant(x, CFG.groundY, dna));
+                        STATE.lastDNA = null; // Reset
+                        createParticles(x, CFG.groundY, '#4ade80');
+                    }
                 }
             }
-        };
+        }
 
-        // --- ARRANQUE ---
-        function startGame() {
-            Sound.init();
-            document.getElementById('introScreen').style.opacity = 0;
-            setTimeout(() => {
-                document.getElementById('introScreen').style.display = 'none';
-                Game.init();
-            }, 1000);
+        function showScanner(plant) {
+            const el = document.getElementById('scanner');
+            el.style.display = 'block';
+            document.getElementById('scan-info').innerHTML = `
+                <strong style="color:${`hsl(${plant.dna.hue},60%,60%)`}">${plant.dna.name}</strong><br>
+                Tipo: ${plant.dna.type.toUpperCase()}<br>
+                Estado: ${plant.state}<br>
+                Atrae: <span style="color:#fff">${plant.dna.attracts.toUpperCase()}</span>
+            `;
+        }
+
+        function createParticles(x, y, color) {
+            // Simplificado para la demo
+            const ctx = cvs.fx.getContext('2d');
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.arc(x, y, 5, 0, Math.PI*2);
+            ctx.fill();
+            setTimeout(() => ctx.clearRect(0,0,CFG.w,CFG.h), 200);
+        }
+
+        function setTool(t) {
+            STATE.tool = t;
+            document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
+            event.target.closest('button').classList.add('active');
+        }
+
+        function updateUI() {
+            document.getElementById('ui-bio').innerText = Math.floor(STATE.bio);
+            document.getElementById('ui-seeds').innerText = STATE.seeds;
+            document.getElementById('ui-species').innerText = STATE.discoveredSpecies.size;
+            document.getElementById('ui-fauna-count').innerText = `${STATE.animals.length} Seres Vivos`;
         }
 
     </script>
